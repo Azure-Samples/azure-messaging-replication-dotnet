@@ -1,0 +1,22 @@
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "serviceBusTrigger",
+            "connection": "QueueAToQueueB-source-connection",
+            "queueName": "queue-a",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "serviceBus",
+            "connection": "QueueAToQueueB-target-connection",
+            "queueName": "queue-b",
+            "name": "output"
+        }
+    ],
+    "disabled": false,
+    "scriptFile": "../bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToServiceBus"
+}

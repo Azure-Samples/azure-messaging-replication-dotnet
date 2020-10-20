@@ -1,0 +1,262 @@
+## Baseline for a Configuration-Based Replication Application
+
+This project is a starting point for a configuration-based replication application. 
+
+### Creating replication tasks 
+
+To create a new replication task, first create a new folder underneath the project folder. The name of the new folder is the name of the function, for instance `EventHubAToEventHubB`. The name has no functional correlation with the messaging entities being used and serves only for you to identify them. You can create dozens of functions in the same project.
+
+Next, create a `function.json` file in the folder. The file configures the function. Start with the following content:
+
+``` JSON
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "name": "output"
+        }
+    ],
+    "disabled": false,
+    "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.*"
+}
+```
+
+In that file, you need to complete three configuration steps that depend on which entities you want to connect:
+
+1. [Configure the input direction](#configure-the-input-direction)
+2. [Configure the output direction](#configure-the-output-direction)
+3. [Configure the entry point](#configure-the-entry-point)
+
+#### Configure the input direction
+
+##### Event Hub input
+
+If you want to receive events from an Event Hub, add configuration information to the top section within "bindings" that sets
+
+* **type** - the "eventHubTrigger" type.
+* **connection** - the name of the app configuration value for the Event Hub connection string. This value must be `{FunctionName}-source-connection` if you want to use the provided scripts.
+* **eventHubName** - the name of the Event Hub within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "eventHubTrigger",
+            "connection": "InputEHToOutputEH-source-connection",
+            "eventHubName": "inputEH",
+            "name": "input" 
+        }
+    ...
+```
+
+##### Service Bus Queue input
+
+If you want to receive events from a Service Bus queue, add configuration information to the top section within "bindings" that sets
+
+* **type** - the "serviceBusTrigger" type.
+* **connection** - the name of the app configuration value for the Service Bus connection string. This value must be `{FunctionName}-source-connection` if you want to use the provided scripts.
+* **queueName** - the name of the Service Bus Queue within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "serviceBusTrigger",
+            "connection": "QueueAToQueueB-source-connection",
+            "queueName": "queue-a",
+            "name": "input" 
+        }
+    ...
+```
+
+##### Service Bus Topic input
+
+If you want to receive events from a Service Bus topic, add configuration information to the top section within "bindings" that sets
+
+* **type** - the "serviceBusTrigger" type.
+* **connection** - the name of the app configuration value for the Service Bus connection string. This value must be `{FunctionName}-source-connection` if you want to use the provided scripts.
+* **topicName** - the name of the Service Bus Topic within the namespace identified by the connection string.
+* **subscriptionName** - the name of the Service Bus Subscription on the given topic within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "serviceBusTrigger",
+            "connection": "TopicXSubYToQueueB-source-connection",
+            "topicName": "topic-x",
+            "subscriptionName" : "sub-y",
+            "name": "input" 
+        }
+    ...
+```
+
+#### Configure the output direction
+
+##### Event Hub output
+
+If you want to forward events to an Event Hub, add configuration information to the bottom section within "bindings" that sets
+
+* **type** - the "eventHub" type.
+* **connection** - the name of the app configuration value for the Event Hub connection string. This value must be `{FunctionName}-target-connection` if you want to use the provided scripts.
+* **eventHubName** - the name of the Event Hub within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            ...
+        },
+        {
+            "direction": "out",
+            "type": "eventHub",
+            "connection": "InputEHToOutputEH-target-connection",
+            "eventHubName": "outputEH",
+            "name": "output" 
+        }
+    ...
+```
+
+##### Service Bus Queue output
+
+If you want to forward events to a Service Bus Queue, add configuration information to the bottom section within "bindings" that sets
+
+* **type** - the "serviceBus" type.
+* **connection** - the name of the app configuration value for the Service Bus connection string. This value must be `{FunctionName}-target-connection` if you want to use the provided scripts.
+* **queueName** - the name of the Service Bus queue within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            ...
+        },
+        {
+            "direction": "out",
+            "type": "serviceBus",
+            "connection": "QueueAToQueueB-target-connection",
+            "eventHubName": "queue-b",
+            "name": "output" 
+        }
+    ...
+```
+
+##### Service Bus Topic output
+
+If you want to forward events to a Service Bus Topic, add configuration information to the bottom section within "bindings" that sets
+
+* **type** - the "serviceBus" type.
+* **connection** - the name of the app configuration value for the Service Bus connection string. This value must be `{FunctionName}-target-connection` if you want to use the provided scripts.
+* **topicName** - the name of the Service Bus topic within the namespace identified by the connection string.
+
+```JSON
+    ...
+    "bindings" : [
+        {
+            ...
+        },
+        {
+            "direction": "out",
+            "type": "serviceBus",
+            "connection": "QueueAToQueueB-target-connection",
+            "eventHubName": "queue-b",
+            "name": "output" 
+        }
+    ...
+```
+
+#### Configure the entry point
+
+The entry point configuration picks one of the standard replication tasks. If you are modifying the `Azure.Messaging.Replication` project, you can also add tasks and refer to them here. For instance:
+
+```JSON
+    ...
+    "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
+    ...
+```
+
+The following table gives you the correct values for combinations of sources and targets:
+
+| Source      | Target      | Entry Point 
+|-------------|-------------|------------------------------------------------------------------------
+| Event Hub   | Event Hub   | `Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub`
+| Event Hub   | Service Bus | `Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToServiceBus`
+| Service Bus | Event Hub   | `Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToEventHub`
+| Service Bus | Service Bus | `Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToServiceBus`
+
+### Build, Configure, Deploy
+
+Once you've created the tasks you need, you need to build the project, configure
+the (existing) application, and deploy the tasks.
+
+#### Build
+
+The `Build-FunctionApp.ps1` Powershell script will build the project and put all
+required files into the `./bin` folder immediately underneath the project root.
+This needs to be run after every change. 
+
+#### Configure
+
+The `Configure-FunctionApp.ps1` Powershell script calls the shared [Update-PairingConfiguration.ps1](../../../scripts/powershell/README.md) Powershell script and needs to be run once for each task in an existing Function
+app, for the configured pairing.
+
+For instance, assume a task `SourceEHToTargetEH` that is configured like this:
+
+```JSON
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "eventHubTrigger",
+            "connection": "SourceEHToTargetEH-source-connection",
+            "eventHubName": "sourceEH",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "eventHub",
+            "connection": "SourceEHToTargetEH-target-connection",
+            "eventHubName": "targetEH",
+            "name": "output"
+        }
+    ],
+    "disabled": false,
+    "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
+}
+```
+For this task, you would configure the Function application and the permissions
+on the messaging resources like this:
+
+```powershell
+Configure-FunctionApp.ps1 -ResourceGroupName myreplicationapp 
+                          -FunctionAppName myreplicationapp 
+                          -TaskName SourceEHToTargetEH
+                          -SourceEventHubNamespaceName my1stnamespace
+                          -SourceEventHubName sourceEH 
+                          -TargetEventHubNamespaceName my2ndnamespace
+                          -TargetEventHubName targetEH
+```
+
+#### Deploy
+
+Once the build and Configure tasks are complete, the directory can be deployed into the Azure Functions app as-is. The `Deploy-FunctionApp.ps1` script simply calls the publish task of the Azure Functions tools:
+
+```Powershell
+func azure functionapp publish $FunctionAppName
+```
+
+Azure Functions has numerous deployment options and this is only one. For instance, you can deploy using [Azure Pipelines](https://docs.microsoft.com/azure/azure-functions/functions-how-to-azure-devops) or [GitHub Actions](https://docs.microsoft.com/azure/azure-functions/functions-how-to-github-actions).
+
+In CI/CD environments, you simply need to integrate the steps described above into a build script.

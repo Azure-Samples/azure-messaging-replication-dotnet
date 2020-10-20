@@ -1,0 +1,22 @@
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "serviceBusTrigger",
+            "connection": "QueueAToOutput1-source-connection",
+            "queueName": "queue-a",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "eventHub",
+            "connection": "QueueAToOutput1-target-connection",
+            "eventHubName": "output1",
+            "name": "output"
+        }
+    ],
+    "disabled": false,
+    "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToEventHub"
+}

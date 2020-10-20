@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30523.141
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceBusToServiceBusCopy", "ServiceBusToServiceBusCopy.csproj", "{E7A69863-0E4F-43AB-8105-E2970F9DE399}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Messaging.Replication", "..\..\src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj", "{89CBDADD-F922-49A7-A1B0-9A84DE5B119A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E7A69863-0E4F-43AB-8105-E2970F9DE399}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7A69863-0E4F-43AB-8105-E2970F9DE399}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7A69863-0E4F-43AB-8105-E2970F9DE399}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7A69863-0E4F-43AB-8105-E2970F9DE399}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89CBDADD-F922-49A7-A1B0-9A84DE5B119A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89CBDADD-F922-49A7-A1B0-9A84DE5B119A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89CBDADD-F922-49A7-A1B0-9A84DE5B119A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89CBDADD-F922-49A7-A1B0-9A84DE5B119A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B6D3F489-C689-49CD-9B83-83C991EAC36A}
+	EndGlobalSection
+EndGlobal
