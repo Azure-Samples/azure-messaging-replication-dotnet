@@ -207,7 +207,7 @@ This needs to be run after every change.
 
 #### Configure
 
-The `Configure-FunctionApp.ps1` Powershell script calls the shared [Update-PairingConfiguration.ps1](../../../scripts/powershell/README.md) Powershell script and needs to be run once for each task in an existing Function
+The `Configure-Function.ps1` Powershell script calls the shared [Update-PairingConfiguration.ps1](../../../scripts/powershell/README.md) Powershell script and needs to be run once for each task in an existing Function
 app, for the configured pairing.
 
 For instance, assume a task `SourceEHToTargetEH` that is configured like this:
@@ -240,14 +240,16 @@ For this task, you would configure the Function application and the permissions
 on the messaging resources like this:
 
 ```powershell
-Configure-FunctionApp.ps1 -ResourceGroupName myreplicationapp 
-                          -FunctionAppName myreplicationapp 
-                          -TaskName SourceEHToTargetEH
-                          -SourceEventHubNamespaceName my1stnamespace
-                          -SourceEventHubName sourceEH 
-                          -TargetEventHubNamespaceName my2ndnamespace
-                          -TargetEventHubName targetEH
+Configure-Function.ps1 -ResourceGroupName "myreplicationapp" 
+                          -FunctionAppName "myreplicationapp" 
+                          -TaskName "SourceEHToTargetEH"
+                          -SourceEventHubNamespaceName "my1stnamespace"
+                          -SourceEventHubName "sourceEH" 
+                          -TargetEventHubNamespaceName "my2ndnamespace"
+                          -TargetEventHubName "targetEH"
 ```
+
+The script assumes that the messaging resources - here the Event Hub and the Queue - already exist. The configuration script will add the required configuration entries to the application configuration.
 
 #### Deploy
 
@@ -257,6 +259,6 @@ Once the build and Configure tasks are complete, the directory can be deployed i
 func azure functionapp publish $FunctionAppName
 ```
 
-Azure Functions has numerous deployment options and this is only one. For instance, you can deploy using [Azure Pipelines](https://docs.microsoft.com/azure/azure-functions/functions-how-to-azure-devops) or [GitHub Actions](https://docs.microsoft.com/azure/azure-functions/functions-how-to-github-actions).
+Replication applications are regular Azure Function applications and you can therefore use any of the [available deployment options](https://docs.microsoft.com/en-us/azure/azure-functions/functions-deployment-technologies). For testing, you can also run the [application locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local), but with the messaging services in the cloud.
 
 In CI/CD environments, you simply need to integrate the steps described above into a build script.
