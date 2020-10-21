@@ -10,10 +10,10 @@ namespace EventHubToEventHubCopy
 {
     public static class Tasks
     {
-        [FunctionName("Replication")]
-        public static Task Replication(
-            [EventHubTrigger("replication-source-eventhub", ConsumerGroup = "replication", Connection = "replication-source-eventhub-connection")] EventData[] input,
-            [EventHub("replication-target-eventhub", Connection = "replication-target-eventhub-connection")] IAsyncCollector<EventData> output,
+        [FunctionName("Eh1ToEh2")]
+        public static Task Eh1ToEh2(
+            [EventHubTrigger("eh1", ConsumerGroup = "Eh1ToEh2", Connection = "Eh1ToEh2-source-connection")] EventData[] input,
+            [EventHub("eh2", Connection = "Eh1ToEh2-target-connection")] IAsyncCollector<EventData> output,
             ILogger log)
         {
             return EventHubReplicationTasks.ForwardToEventHub(input, output, log);

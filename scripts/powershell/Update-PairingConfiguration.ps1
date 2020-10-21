@@ -217,4 +217,4 @@ elseif ($TargetTopicName) {
 }
 
 
-$null = Update-AzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $ResourceGroupName -AppSetting @{ -join ($TaskName, "-source-connection") = $SourceConnectionString; -join ($TaskName, "-target-connection") = $TargetConnectionString }
+$null = Update-AzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $FunctionApp.ResourceGroupName -AppSetting @{ -join ($TaskName, "-source-connection") = $SourceConnectionString; -join ($TaskName, "-target-connection") = $TargetConnectionString }

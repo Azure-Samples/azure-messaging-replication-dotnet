@@ -46,4 +46,4 @@ param (
     $TargetTopicName
 )
 
-& ("$PSScriptRoot\..\..\..\scripts\powershell\Update-PairingConfiguration.ps1") @args
+& "$PSScriptRoot\..\..\..\scripts\powershell\Update-PairingConfiguration.ps1"  @PSBoundParameters
