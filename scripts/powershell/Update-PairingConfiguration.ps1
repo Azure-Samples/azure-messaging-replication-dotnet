@@ -3,7 +3,7 @@ param (
     # Name of the replication task
     [Parameter(Mandatory)]
     [String]
-    $TaskName = "replication",
+    $TaskName,
     # Name of the Functions Application
     [Parameter(Mandatory)]
     [String]

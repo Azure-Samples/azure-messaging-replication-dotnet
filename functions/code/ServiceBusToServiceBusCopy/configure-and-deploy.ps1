@@ -14,9 +14,9 @@ param (
     $NamespaceName
 )
 
-Write-Output "Creating or updating Event Hub namespace"
+Write-Output "Creating or updating Service Bus namespace"
 $null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroup -TemplateFile ".\template\azuredeploy.json" -NamespaceName $NamespaceName
-Write-Output "Configuring Event Hub namespace and application"
-& ".\Configure-Function.ps1" -TaskName Eh1ToEh2 -FunctionAppName $FunctionAppName -SourceNamespaceName $NamespaceName -SourceEventHub "eh1" -TargetNamespaceName $NamespaceName -TargetEventHub "eh2"
+Write-Output "Configuring Service Bus namespace and application"
+& ".\Configure-Function.ps1" -TaskName QueueAToQueueB -FunctionAppName $FunctionAppName -SourceNamespaceName $NamespaceName -SourceQueue "queue-a" -TargetNamespaceName $NamespaceName -TargetQueue "queue-b"
 Write-Output "Deploying application"
 func azure functionapp publish $FunctionAppName
