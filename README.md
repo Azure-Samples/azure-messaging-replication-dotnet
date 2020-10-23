@@ -84,10 +84,11 @@ The following folders are part of this project:
 * **[src](src)** - .NET Core libraries implementing replication tasks.
   * **[src/Azure.Messaging.Replication](src/Azure.Messaging.Replication)** - Standard replication tasks
 * **[functions/code](functions/code)** - .NET Core Azure Functions projects as starting points for your custom replication tasks that require modification of events or messages as they are being moved:
-   * **[AzureFunctionsBaseApp](functions/code/AzureFunctionsBaseApp)** - Project Template
+   * **[CodeBaseApp](functions/code/CodeBaseApp)** - Project Template
    * **[EventHubToEventHubCopy](functions/code/EventHubToEventHubCopy)** - Function for copying data between two Event Hubs
    * **[ServiceBusToServiceBusCopy](functions/code/ServiceBusToServiceBusCopy)** - Function for copying data between two Service Bus Queues
 * **[functions/config](functions/config)** - Configuration-only projects, which use the standard replication task library:
+   * **[ConfigBaseApp](functions/config/ConfigBaseApp)** - Project Template
    * **[EventHubToEventHubCopy](functions/config/EventHubToEventHubCopy)** - Function for copying data between two Event Hubs
    * **[ServiceBusToEventHubCopy](functions/config/ServiceBusToEventHubCopy)** - Function for copying data between a Service Bus Queue to an Event Hub
    * **[ServiceBusToServiceBusCopy](functions/config/ServiceBusToServiceBusCopy)** - Function for copying data between two Service Bus Queues

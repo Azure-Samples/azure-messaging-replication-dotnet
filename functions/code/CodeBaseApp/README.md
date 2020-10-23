@@ -216,9 +216,9 @@ For instance, assume the task `Eh1ToQueueA` from above. For this task, you would
 Configure-Function.ps1  -ResourceGroupName "myreplicationapp"
                         -FunctionAppName "myreplicationapp"
                         -TaskName "Eh1ToQueueA"
-                        -SourceEventHubNamespaceName "my1stnamespace"
+                        -SourceNamespaceName "my1stnamespace"
                         -SourceEventHubName "eh1"
-                        -TargetEventHubNamespaceName "my2ndnamespace"
+                        -TargetNamespaceName "my2ndnamespace"
                         -TargetQueueName "queue-a"
 ```
 
