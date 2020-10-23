@@ -49,8 +49,8 @@ If you want to receive events from an Event Hub, add configuration information t
         {
             "direction": "in",
             "type": "eventHubTrigger",
-            "connection": "InputEHToOutputEH-source-connection",
-            "eventHubName": "inputEH",
+            "connection": "EventHubAToEventHubB-source-connection",
+            "eventHubName": "eventHubA",
             "name": "input" 
         }
     ...
@@ -119,8 +119,8 @@ If you want to forward events to an Event Hub, add configuration information to 
         {
             "direction": "out",
             "type": "eventHub",
-            "connection": "InputEHToOutputEH-target-connection",
-            "eventHubName": "outputEH",
+            "connection": "EventHubAToEventHubB-target-connection",
+            "eventHubName": "eventHubB",
             "name": "output" 
         }
     ...
@@ -210,7 +210,7 @@ This needs to be run after every change.
 The `Configure-Function.ps1` Powershell script calls the shared [Update-PairingConfiguration.ps1](../../../scripts/powershell/README.md) Powershell script and needs to be run once for each task in an existing Function
 app, for the configured pairing.
 
-For instance, assume a task `SourceEHToTargetEH` that is configured like this:
+For instance, assume a task `EventHubAToEventHubB` that is configured like this:
 
 ```JSON
 {
@@ -219,15 +219,15 @@ For instance, assume a task `SourceEHToTargetEH` that is configured like this:
         {
             "direction": "in",
             "type": "eventHubTrigger",
-            "connection": "SourceEHToTargetEH-source-connection",
-            "eventHubName": "sourceEH",
+            "connection": "EventHubAToEventHubB-source-connection",
+            "eventHubName": "EventHubA",
             "name": "input" 
         },
         {
             "direction": "out",
             "type": "eventHub",
-            "connection": "SourceEHToTargetEH-target-connection",
-            "eventHubName": "targetEH",
+            "connection": "EventHubAToEventHubB-target-connection",
+            "eventHubName": "EventHubB",
             "name": "output"
         }
     ],
@@ -242,11 +242,11 @@ on the messaging resources like this:
 ```powershell
 Configure-Function.ps1 -ResourceGroupName "myreplicationapp" 
                           -FunctionAppName "myreplicationapp" 
-                          -TaskName "SourceEHToTargetEH"
-                          -SourceEventHubNamespaceName "my1stnamespace"
-                          -SourceEventHubName "sourceEH" 
-                          -TargetEventHubNamespaceName "my2ndnamespace"
-                          -TargetEventHubName "targetEH"
+                          -TaskName "EventHubAToEventHubB"
+                          -SourceNamespaceName "my1stnamespace"
+                          -SourceEventHubName "EventHubA" 
+                          -TargetNamespaceName "my2ndnamespace"
+                          -TargetEventHubName "EventHubB"
 ```
 
 The script assumes that the messaging resources - here the Event Hub and the Queue - already exist. The configuration script will add the required configuration entries to the application configuration.

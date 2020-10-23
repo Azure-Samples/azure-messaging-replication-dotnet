@@ -4,15 +4,15 @@
         {
             "direction": "in",
             "type": "eventHubTrigger",
-            "connection": "Input1ToOutput1-source-connection",
-            "eventHubName": "input1",
+            "connection": "EventHubAToEventHubB-source-connection",
+            "eventHubName": "eventHubA",
             "name": "input" 
         },
         {
             "direction": "out",
             "type": "eventHub",
-            "connection": "Input1ToOutput1-target-connection",
-            "eventHubName": "output1",
+            "connection": "EventHubAToEventHubB-target-connection",
+            "eventHubName": "eventHubB",
             "name": "output"
         }
     ],

@@ -4,15 +4,15 @@
         {
             "direction": "in",
             "type": "serviceBusTrigger",
-            "connection": "QueueAToOutput1-source-connection",
+            "connection": "QueueAToEventHubB-source-connection",
             "queueName": "queue-a",
             "name": "input" 
         },
         {
             "direction": "out",
             "type": "eventHub",
-            "connection": "QueueAToOutput1-target-connection",
-            "eventHubName": "output1",
+            "connection": "QueueAToEventHubB-target-connection",
+            "eventHubName": "eventHubB",
             "name": "output"
         }
     ],
