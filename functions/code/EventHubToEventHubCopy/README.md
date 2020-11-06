@@ -53,8 +53,7 @@ permissions on the messaging resources like this. Mind that we host both Event
 Hubs in the same namespace to keep the example simple. 
 
 ```powershell
-Configure-Function.ps1  -ResourceGroupName "myreplicationapp"
-                        -FunctionAppName "myreplicationapp"
+Configure-Function.ps1  -FunctionAppName "myreplicationapp"
                         -TaskName "Eh1ToEh2"
                         -SourceNamespaceName "mynamespace"
                         -SourceEventHubName "eh1"
@@ -72,3 +71,9 @@ options](https://docs.microsoft.com/en-us/azure/azure-functions/functions-deploy
 For testing, you can also run the [application
 locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local),
 but with the messaging services in the cloud.
+
+Using the Azure Functions tools, the simplest way to deploy the application is 
+
+```powershell
+func azure functionapp publish "myreplicationapp"
+```

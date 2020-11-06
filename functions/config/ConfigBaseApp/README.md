@@ -21,6 +21,12 @@ Next, create a `function.json` file in the folder. The file configures the funct
             "name": "output"
         }
     ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
     "disabled": false,
     "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
     "entryPoint": "Azure.Messaging.Replication.*"
@@ -194,6 +200,19 @@ The following table gives you the correct values for combinations of sources and
 | Service Bus | Event Hub   | `Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToEventHub`
 | Service Bus | Service Bus | `Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToServiceBus`
 
+### Retry policy
+
+Refer to the [Azure Functions documentation on
+retries](../azure-functions/functions-bindings-error-pages?tabs=csharp) to
+configure the retry policy. The policy settings chosen throughout the projects
+in this repository configure an exponential backoff strategy with retry
+intervals from 5 seconds to 5 minutes with infinite retries to avoid data loss.
+
+For Service Bus, review the ["using retry support on top of trigger
+resilience"](../azure-functions/functions-bindings-error-pages?tabs=csharp#using-retry-support-on-top-of-trigger-resilience)
+section to understand the interaction of triggers and the maximum delivery count
+defined for the queue.
+
 ### Build, Configure, Deploy
 
 Once you've created the tasks you need, you need to build the project, configure
@@ -231,6 +250,12 @@ For instance, assume a task `EventHubAToEventHubB` that is configured like this:
             "name": "output"
         }
     ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
     "disabled": false,
     "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
     "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
@@ -256,7 +281,7 @@ The script assumes that the messaging resources - here the Event Hub and the Que
 Once the build and Configure tasks are complete, the directory can be deployed into the Azure Functions app as-is. The `Deploy-FunctionApp.ps1` script simply calls the publish task of the Azure Functions tools:
 
 ```Powershell
-func azure functionapp publish $FunctionAppName
+func azure functionapp publish "myreplicationapp" 
 ```
 
 Replication applications are regular Azure Function applications and you can therefore use any of the [available deployment options](https://docs.microsoft.com/en-us/azure/azure-functions/functions-deployment-technologies). For testing, you can also run the [application locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local), but with the messaging services in the cloud.

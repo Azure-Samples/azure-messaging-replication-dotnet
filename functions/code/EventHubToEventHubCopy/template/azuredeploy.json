@@ -55,7 +55,7 @@
       ],
       "properties": {
         "messageRetentionInDays": 1,
-        "partitionCount": 1
+        "partitionCount": 16
       }
     },
     {
@@ -68,7 +68,7 @@
       ],
       "properties": {
         "messageRetentionInDays": 7,
-        "partitionCount": 1
+        "partitionCount": 16
       }
     }
   ]

@@ -7,5 +7,22 @@
                 "isEnabled": true
             }
         }
+    },
+    "extensions": {
+        "eventHubs": {
+            "batchCheckpointFrequency": 1,
+            "eventProcessorOptions": {
+                "maxBatchSize": 5000,
+                "prefetchCount": 200
+            }
+        },
+        "serviceBus": {
+            "prefetchCount": 200,
+            "messageHandlerOptions": {
+                "autoComplete": true,
+                "maxConcurrentCalls": 1,
+                "maxAutoRenewDuration": "00:05:00"
+            }
+        }
     }
 }

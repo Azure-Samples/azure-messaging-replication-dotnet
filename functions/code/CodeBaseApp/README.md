@@ -84,6 +84,20 @@ public static void Eh1ToEh2(
 }
 ```
 
+
+### Retry policy
+
+Refer to the [Azure Functions documentation on
+retries](../azure-functions/functions-bindings-error-pages?tabs=csharp) to
+configure the retry policy. The policy settings chosen throughout the projects
+in this repository configure an exponential backoff strategy with retry
+intervals from 5 seconds to 5 minutes with infinite retries to avoid data loss.
+
+For Service Bus, review the ["using retry support on top of trigger
+resilience"](../azure-functions/functions-bindings-error-pages?tabs=csharp#using-retry-support-on-top-of-trigger-resilience)
+section to understand the interaction of triggers and the maximum delivery count
+defined for the queue.
+
 ### Data and metadata mapping
 
 Once you've decided on a pair of input trigger and output binding, you will have to perform some mapping between the different event or message types, unless the type of your trigger and the output is the same.
@@ -213,8 +227,7 @@ app, for the configured pairing.
 For instance, assume the task `Eh1ToQueueA` from above. For this task, you would configure the Function application and the permissions on the messaging resources like this:
 
 ```powershell
-Configure-Function.ps1  -ResourceGroupName "myreplicationapp"
-                        -FunctionAppName "myreplicationapp"
+Configure-Function.ps1  -FunctionAppName "myreplicationapp"
                         -TaskName "Eh1ToQueueA"
                         -SourceNamespaceName "my1stnamespace"
                         -SourceEventHubName "eh1"
@@ -232,4 +245,10 @@ options](https://docs.microsoft.com/en-us/azure/azure-functions/functions-deploy
 For testing, you can also run the [application
 locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local),
 but with the messaging services in the cloud.
+
+Using the Azure Functions tools, the simplest way to deploy the application is 
+
+```powershell
+func azure functionapp publish "myreplicationapp"
+```
 

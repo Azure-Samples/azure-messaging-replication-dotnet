@@ -16,6 +16,12 @@
             "name": "output"
         }
     ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
     "disabled": false,
     "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
     "entryPoint": "Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToEventHub"
