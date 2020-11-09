@@ -12,7 +12,7 @@ namespace EventHubCopyValidation
     using Microsoft.Azure.EventHubs;
     using Xunit;
 
-    class PartitionLevelTest
+    class EventHubCopyTest
     {
         readonly string targetNamespaceConnectionString;
 
@@ -24,7 +24,7 @@ namespace EventHubCopyValidation
 
         readonly string sourceConsumerGroup;
 
-        public PartitionLevelTest(
+        public EventHubCopyTest(
             string targetNamespaceConnectionString,
             string sourceNamespaceConnectionString,
             string targetEventHub, 

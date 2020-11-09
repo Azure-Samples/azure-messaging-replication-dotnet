@@ -38,7 +38,7 @@ namespace EventHubCopyValidation
         {
             try
             {
-                var plt = new PartitionLevelTest(settings.TargetNamespaceConnectionString,
+                var plt = new EventHubCopyTest(settings.TargetNamespaceConnectionString,
                     settings.SourceNamespaceConnectionString, settings.TargetEventHub, settings.SourceEventHub,
                     settings.SourceConsumerGroup);
                 await plt.RunTest();
