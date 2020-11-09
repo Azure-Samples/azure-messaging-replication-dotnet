@@ -8,16 +8,43 @@ namespace Azure.Messaging.Replication
     using Microsoft.Azure.ServiceBus;
     using Microsoft.Azure.WebJobs;
     using Microsoft.Extensions.Logging;
+    using System.Collections.Generic;
 
     public class EventHubReplicationTasks
     {
-        public static async Task ForwardToEventHub(EventData[] input, IAsyncCollector<EventData> output,
+        public static Task ForwardToEventHub(EventData[] input, EventHubClient outputClient,
             ILogger log)
         {
+            var tasks = new List<Task>();
+            var noPartitionBatch = new List<EventData>();
+            var partitionBatches = new Dictionary<string, List<EventData> >();
             foreach (EventData eventData in input)
             {
-                await output.AddAsync(eventData);
+                if (eventData.SystemProperties.PartitionKey != null)
+                {
+                    if ( !partitionBatches.ContainsKey(eventData.SystemProperties.PartitionKey))
+                    {
+                        partitionBatches[eventData.SystemProperties.PartitionKey] = new List<EventData>();
+                    }
+                    partitionBatches[eventData.SystemProperties.PartitionKey].Add(eventData);
+                }
+                else
+                {
+                    noPartitionBatch.Add(eventData);
+                }
             }
+            if (noPartitionBatch.Count > 0)
+            {
+                tasks.Add(outputClient.SendAsync(noPartitionBatch));
+            }
+            if (partitionBatches.Count > 0)
+            {
+                foreach( var batch in partitionBatches)
+                {
+                    tasks.Add(outputClient.SendAsync(batch.Value, batch.Key));
+                }
+            }
+            return Task.WhenAll(tasks);
         }
 
         public static async Task ForwardToServiceBus(EventData[] input, IAsyncCollector<Message> output,

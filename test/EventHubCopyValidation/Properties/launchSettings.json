@@ -1,7 +1,8 @@
 {
   "profiles": {
     "EventHubCopyValidation": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "-t \"Endpoint=sb://clemensv93.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=gsq6h7+H4KyABwjS45XnLGzxz24cobNUya1GFr7zDqI=\" -s \"Endpoint=sb://clemensv93.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=gsq6h7+H4KyABwjS45XnLGzxz24cobNUya1GFr7zDqI=\" -et eh1 -es eh2 -cg \"$Default\""
     }
   }
 }

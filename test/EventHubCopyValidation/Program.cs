@@ -42,6 +42,11 @@ namespace EventHubCopyValidation
                     settings.SourceNamespaceConnectionString, settings.TargetEventHub, settings.SourceEventHub,
                     settings.SourceConsumerGroup);
                 await plt.RunTest();
+
+                var plt1 = new EventHubOrderTest(settings.TargetNamespaceConnectionString,
+                    settings.SourceNamespaceConnectionString, settings.TargetEventHub, settings.SourceEventHub,
+                    settings.SourceConsumerGroup);
+                await plt1.RunTest();
             }
             catch (Exception e)
             {

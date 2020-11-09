@@ -8,36 +8,53 @@ namespace Azure.Messaging.Replication
     using Microsoft.Azure.ServiceBus;
     using Microsoft.Azure.WebJobs;
     using Microsoft.Extensions.Logging;
+    using System.Collections.Generic;
 
     public class ServiceBusReplicationTasks
     {
-        public static async Task ForwardToEventHub(Message[] input, IAsyncCollector<EventData> output,
+        public static Task ForwardToEventHub(Message[] input, EventHubClient outputClient,
             ILogger log)
         {
+            var tasks = new List<Task>();
+            var noPartitionBatch = new List<EventData>();
+            var partitionBatches = new Dictionary<string, List<EventData>>();
+
             foreach (var message in input)
             {
-                var eventData = new EventData(message.Body)
-                {
-                    SystemProperties =
-                    {
-                        { "content-type", message.ContentType },
-                        { "to", message.To },
-                        { "correlation-id", message.CorrelationId },
-                        { "subject", message.Label },
-                        { "reply-to", message.ReplyTo },
-                        { "reply-to-group-name", message.ReplyToSessionId },
-                        { "message-id", message.MessageId },
-                        { "x-opt-partition-key", message.PartitionKey ?? message.SessionId }
-                    }
-                };
-
+                var eventData = new EventData(message.Body);
+                var key = message.PartitionKey ?? message.SessionId;
                 foreach (var property in message.UserProperties)
                 {
                     eventData.Properties.Add(property);
                 }
 
-                await output.AddAsync(eventData);
+                if (key != null)
+                {
+                    if (!partitionBatches.ContainsKey(key))
+                    {
+                        partitionBatches[key] = new List<EventData>();
+                    }
+                    partitionBatches[key].Add(eventData);
+                }
+                else
+                {
+                    noPartitionBatch.Add(eventData);
+                }
             }
+
+
+            if (noPartitionBatch.Count > 0)
+            {
+                tasks.Add(outputClient.SendAsync(noPartitionBatch));
+            }
+            if (partitionBatches.Count > 0)
+            {
+                foreach (var batch in partitionBatches)
+                {
+                    tasks.Add(outputClient.SendAsync(batch.Value, batch.Key));
+                }
+            }
+            return Task.WhenAll(tasks);
         }
 
         public static async Task ForwardToServiceBus(Message[] input, IAsyncCollector<Message> output,
