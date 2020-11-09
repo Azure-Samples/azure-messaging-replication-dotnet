@@ -14,9 +14,15 @@
             "eventProcessorOptions": {
                 "maxBatchSize": 100,
                 "prefetchCount": 200
-            }},
-        "serviceBus" : {
-            
+            }
+        },
+        "serviceBus": { 
+            "prefetchCount": 200,
+            "messageHandlerOptions": {
+                "autoComplete": true,
+                "maxConcurrentCalls": 1,
+                "maxAutoRenewDuration": "00:05:00"
+            }
         }
     }
 }
