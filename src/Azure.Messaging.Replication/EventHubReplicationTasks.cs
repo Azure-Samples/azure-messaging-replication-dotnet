@@ -12,7 +12,7 @@ namespace Azure.Messaging.Replication
 
     public class EventHubReplicationTasks
     {
-        public static Task ForwardToEventHub(EventData[] input, EventHubClient outputClient,
+        public static Task ForwardToEventHub(EventData[] input, EventHubClient output,
             ILogger log)
         {
             var tasks = new List<Task>();
@@ -35,13 +35,13 @@ namespace Azure.Messaging.Replication
             }
             if (noPartitionBatch.Count > 0)
             {
-                tasks.Add(outputClient.SendAsync(noPartitionBatch));
+                tasks.Add(output.SendAsync(noPartitionBatch));
             }
             if (partitionBatches.Count > 0)
             {
                 foreach( var batch in partitionBatches)
                 {
-                    tasks.Add(outputClient.SendAsync(batch.Value, batch.Key));
+                    tasks.Add(output.SendAsync(batch.Value, batch.Key));
                 }
             }
             return Task.WhenAll(tasks);

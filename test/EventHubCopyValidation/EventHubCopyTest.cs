@@ -110,7 +110,7 @@ namespace EventHubCopyValidation
             await Task.WhenAll(sendTasks);
             await Task.WhenAll(receiveTasks);
             Console.WriteLine();
-            Assert.True(tracker.IsEmpty);
+            Assert.True(tracker.IsEmpty, $"tracker is not empty: {tracker.Count}");
 
             Console.WriteLine(((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond);
             
