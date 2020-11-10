@@ -6,5 +6,8 @@ param (
     $FunctionAppName
 )
 
+pushd $PSScriptRoot
 # Deploy
-func azure functionapp publish $FunctionAppName
+func azure functionapp publish $FunctionAppName --force
+
+popd

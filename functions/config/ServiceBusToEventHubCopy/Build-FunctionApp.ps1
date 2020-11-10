@@ -1,3 +1,6 @@
+
+pushd $PSScriptRoot
+
 # Build the Functions Code
 if ( -not $(Get-ChildItem -Directory bin) ) {
     Remove-Item -Recurse bin
@@ -9,3 +12,5 @@ Move-Item dotnet\bin .
 func extensions sync --csx
 func extensions install
 Remove-Item extensions.csproj
+
+popd
