@@ -76,7 +76,7 @@ $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
     Write-Host "result $result"
-    return $result
+    exit $result
 }
 
 Write-Host "Scenario Config Premium/Consumption"
@@ -89,7 +89,7 @@ Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
-    return $result
+    exit $result
 }
 
 Write-Host "Scenario Code/Consumption"
@@ -102,7 +102,7 @@ Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
-    return $result
+    exit $result
 }
 
 Write-Host "Scenario Code/Premium"
@@ -114,4 +114,4 @@ $result = Test-CodeApp -Location $Location -RGName $RGName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
-return $result
+exit $result
