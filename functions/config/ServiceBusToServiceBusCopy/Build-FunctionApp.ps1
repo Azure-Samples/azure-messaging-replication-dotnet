@@ -2,7 +2,7 @@
 pushd $PSScriptRoot
 
 # Build the Functions Code
-if ( $(Get-ChildItem -Directory bin) ) {
+if ( $(Get-ChildItem -Directory bin  -ErrorAction SilentlyContinue) ) {
     Remove-Item -Recurse bin
 }
 dotnet build ..\..\..\src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj -o dotnet 2>&1 > dotnet\build.log
