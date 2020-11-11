@@ -4,7 +4,7 @@ pushd $PSScriptRoot
 if ( $(Get-ChildItem -Directory bin -ErrorAction SilentlyContinue) ) {
     Remove-Item -Recurse bin
 }
-dotnet build "..\..\..\src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj" -o dotnet 2>&1 > dotnet\build.log
+dotnet build "$PSScriptRoot\..\..\..\src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj" -o dotnet 2>&1 > dotnet\build.log
 Move-Item -Force "dotnet\bin" .    
 
 # Sync the required extensions into the build
