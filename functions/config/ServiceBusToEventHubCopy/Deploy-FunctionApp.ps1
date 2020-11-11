@@ -8,6 +8,6 @@ param (
 
 pushd $PSScriptRoot
 # Deploy
-func azure functionapp publish $FunctionAppName --force
+func azure functionapp publish $FunctionAppName --force 2>&1 > deploy.log
 
 popd

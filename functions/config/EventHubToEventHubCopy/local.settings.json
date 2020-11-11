@@ -1,7 +1,16 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
-   }
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=msgrepl1605022529;EndpointSuffix=core.windows.net;AccountKey=Nv4N3ufn1+1Tinjs0SOABYON6VzCbb0Yl1k1JOfvzpCjd+tmQqzt5g7do1n4Eey+dXTIDVdSVIIhDMIgNq2uBg==",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "FUNCTIONS_EXTENSION_VERSION": "~3",
+    "EventHubAToEventHubB-source-connection": "Endpoint=sb://msgrepl1605022529.servicebus.windows.net/;SharedAccessKeyName=replicator;SharedAccessKey=KoO2LcOA8gx2xo2mUCYUFUcb9gbEEOQs/nfFylIf6vA=;EntityPath=eventHubA",
+    "WEBSITE_NODE_DEFAULT_VERSION": "~10",
+    "WEBSITE_CONTENTSHARE": "msgrepl1605022529",
+    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "DefaultEndpointsProtocol=https;AccountName=msgrepl1605022529;EndpointSuffix=core.windows.net;AccountKey=Nv4N3ufn1+1Tinjs0SOABYON6VzCbb0Yl1k1JOfvzpCjd+tmQqzt5g7do1n4Eey+dXTIDVdSVIIhDMIgNq2uBg==",
+    "EventHubAToEventHubB-target-connection": "Endpoint=sb://msgrepl1605022529.servicebus.windows.net/;SharedAccessKeyName=replicator;SharedAccessKey=05y/RoNnhe2Z3fRprHU/TCYHim2zDF/DY6vDaoMEuiU=;EntityPath=eventHubB",
+    "APPINSIGHTS_INSTRUMENTATIONKEY": "2bb9fe46-e2c2-439e-b2b5-eae741f9c1ef",
+    "WEBSITE_RUN_FROM_PACKAGE": "1"
+  },
+  "ConnectionStrings": {}
 }

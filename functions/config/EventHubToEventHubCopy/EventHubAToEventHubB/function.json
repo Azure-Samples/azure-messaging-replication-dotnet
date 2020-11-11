@@ -23,6 +23,6 @@
         "maximumInterval": "00:05:00"
     },
     "disabled": false,
-    "scriptFile": "../dotnet/bin/Azure.Messaging.Replication.dll",
+    "scriptFile": "../bin/Azure.Messaging.Replication.dll",
     "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
 }

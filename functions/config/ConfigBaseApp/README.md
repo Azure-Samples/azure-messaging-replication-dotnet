@@ -281,7 +281,7 @@ The script assumes that the messaging resources - here the Event Hub and the Que
 Once the build and Configure tasks are complete, the directory can be deployed into the Azure Functions app as-is. The `Deploy-FunctionApp.ps1` script simply calls the publish task of the Azure Functions tools:
 
 ```Powershell
-func azure functionapp publish "myreplicationapp" 
+func azure functionapp publish "myreplicationapp" --force
 ```
 
 Replication applications are regular Azure Function applications and you can therefore use any of the [available deployment options](https://docs.microsoft.com/en-us/azure/azure-functions/functions-deployment-technologies). For testing, you can also run the [application locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local), but with the messaging services in the cloud.

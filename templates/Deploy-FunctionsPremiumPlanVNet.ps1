@@ -11,5 +11,5 @@ param (
 )
 
 
-New-AzResourceGroup -Name $ResourceGroupName -Location $Location
-New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -Location $Location -TemplateParameterFile "$PSScriptRoot\premium-vnet\azuredeploy.parameters.json" -TemplateFile "$PSScriptRoot\premium-vnet\azuredeploy.json"
+$null = New-AzResourceGroup -Name $ResourceGroupName -Location $Location
+$null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -Location $Location -TemplateParameterFile "$PSScriptRoot\premium-vnet\azuredeploy.parameters.json" -TemplateFile "$PSScriptRoot\premium-vnet\azuredeploy.json"

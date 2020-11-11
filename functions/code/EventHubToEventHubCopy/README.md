@@ -75,5 +75,5 @@ but with the messaging services in the cloud.
 Using the Azure Functions tools, the simplest way to deploy the application is 
 
 ```powershell
-func azure functionapp publish "myreplicationapp"
+func azure functionapp publish "myreplicationapp" --force
 ```

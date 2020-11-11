@@ -17,5 +17,4 @@ param (
 if ( -not $(Get-AzResourceGroup -Name $ResourceGroupName) ) { 
    $null = New-AzResourceGroup -Name $ResourceGroupName -Location $Location 
 }
-New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateFile ./template\azuredeploy.json -NamespaceName $NamespaceName
-
+$null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateFile "$PSScriptRoot\template\azuredeploy.json" -NamespaceName $NamespaceName

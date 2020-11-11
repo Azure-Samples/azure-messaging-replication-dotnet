@@ -14,9 +14,9 @@ param (
     $NamespaceName
 )
 
-Write-Output "Creating or updating Service Bus namespace"
+Write-Host "Creating or updating Service Bus namespace"
 $null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroup -TemplateFile "$PSScriptRoot\template\azuredeploy.json" -NamespaceName $NamespaceName
-Write-Output "Configuring Service Bus namespace and application"
+Write-Host "Configuring Service Bus namespace and application"
 & ".\Configure-Function.ps1" -TaskName QueueAToQueueB -FunctionAppName $FunctionAppName -SourceNamespaceName $NamespaceName -SourceQueue "queue-a" -TargetNamespaceName $NamespaceName -TargetQueue "queue-b"
-Write-Output "Deploying application"
-func azure functionapp publish $FunctionAppName
+Write-Host "Deploying application"
+func azure functionapp publish $FunctionAppName 2>&1 > deploy.log
