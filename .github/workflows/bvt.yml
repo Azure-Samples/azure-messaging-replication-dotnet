@@ -1,4 +1,4 @@
-name: .NET Core
+name: Check-In Validation Test
 
 
 on:
@@ -21,7 +21,13 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.301
-    - name: Install dependencies
+    - name: Use Node.js
+      uses: actions/setup-node@v1
+      with:
+         node-version: '12.x'
+    - name: Install Functions Tools
+      run: npm i -g azure-functions-core-tools@3 --unsafe-perm true 
+    - name: Restore dependencies
       run: dotnet restore src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj
     - name: Build
       run: dotnet build --configuration Release --no-restore src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj
