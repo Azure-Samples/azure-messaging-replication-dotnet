@@ -94,6 +94,7 @@ The following folders are part of this project:
    * **[ServiceBusToServiceBusCopy](functions/config/ServiceBusToServiceBusCopy)** - Function for copying data between two Service Bus Queues
 * **[scripts](scripts)** - Helper scripts to configure and deploy replication apps
 * **[templates](templates)** - Azure Resource Manager templates to create properly configured Function app environments 
+* **[test](test)** - Test projects
 
 
 ## Contributing
