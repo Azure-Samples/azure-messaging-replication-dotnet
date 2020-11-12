@@ -9,6 +9,6 @@ param (
 pushd $PSScriptRoot
 
 # Deploy
-func azure functionapp publish $FunctionAppName --force 2>&1 >> deploy.log
+func azure functionapp publish $FunctionAppName --force | Write-Verbose
 
 popd

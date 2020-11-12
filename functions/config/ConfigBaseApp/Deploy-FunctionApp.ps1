@@ -7,4 +7,4 @@ param (
 )
 
 # Deploy
-func azure functionapp publish $FunctionAppName --force
+func azure functionapp publish $FunctionAppName --force | Write-Verbose

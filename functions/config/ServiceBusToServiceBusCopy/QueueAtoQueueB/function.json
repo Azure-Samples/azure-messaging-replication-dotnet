@@ -5,14 +5,14 @@
             "direction": "in",
             "type": "serviceBusTrigger",
             "connection": "QueueAToQueueB-source-connection",
-            "queueName": "queue-a",
+            "queueName": "queueA",
             "name": "input" 
         },
         {
             "direction": "out",
             "type": "serviceBus",
             "connection": "QueueAToQueueB-target-connection",
-            "queueName": "queue-b",
+            "queueName": "queueB",
             "name": "output"
         }
     ],

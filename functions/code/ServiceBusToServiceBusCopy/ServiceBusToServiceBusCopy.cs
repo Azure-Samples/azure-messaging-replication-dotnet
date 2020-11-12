@@ -14,8 +14,8 @@ namespace EventHubToEventHubCopy
         [FunctionName("QueueAtoQueueB")]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
         public static Task QueueAtoQueueB(
-            [ServiceBusTrigger("queue-a", Connection = "QueueAtoQueueB-source-connection")] Message[] input,
-            [ServiceBus("queue-b", Connection = "QueueAtoQueueB-target-connection")] IAsyncCollector<Message> output,
+            [ServiceBusTrigger("queueA", Connection = "QueueAtoQueueB-source-connection")] Message[] input,
+            [ServiceBus("queueB", Connection = "QueueAtoQueueB-target-connection")] IAsyncCollector<Message> output,
             ILogger log)
         {
             return ServiceBusReplicationTasks.ForwardToServiceBus(input, output, log);

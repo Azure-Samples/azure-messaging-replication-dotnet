@@ -62,7 +62,7 @@ namespace Azure.Messaging.Replication
         {
             foreach (Message message in input)
             {
-                await output.AddAsync(message);
+                await output.AddAsync(message.Clone());
             }
         }
     }
