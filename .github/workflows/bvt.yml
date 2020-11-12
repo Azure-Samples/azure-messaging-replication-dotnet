@@ -21,24 +21,5 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.301
-    - name: Use Node.js
-      uses: actions/setup-node@v1
-      with:
-         node-version: '12.x'
-    - name: Install Functions Tools
-      run: npm i -g azure-functions-core-tools@3 --unsafe-perm true 
-    - name: Restore dependencies
-      run: dotnet restore src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj
-    - name: Build
-      run: dotnet build --configuration Release --no-restore src\Azure.Messaging.Replication\Azure.Messaging.Replication.csproj
-    - name: Login via Az module
-      uses: azure/login@v1
-      with:
-        creds: ${{secrets.AZURE_CREDENTIALS}}
-        enable-AzPSSession: true 
-    - name: Run Azure PowerShell script
-      uses: azure/powershell@v1
-      with:
-        inlineScript: |
-           & test\Validate-Build.ps1
-        azPSVersion: '3.1.0'
+    - name: Build all 
+      run: dotnet build test\BuildAll.sln
