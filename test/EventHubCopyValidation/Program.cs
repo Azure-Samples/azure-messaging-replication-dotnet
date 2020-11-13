@@ -16,7 +16,7 @@ namespace EventHubCopyValidation
 
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             // before we localize, make sure we have all the error
             // messages in en-us
@@ -26,11 +26,12 @@ namespace EventHubCopyValidation
 
             try
             { 
-                CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
+                return CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
             }
             catch(CommandParsingException exception)
             {
                 Console.WriteLine(exception.Message);
+                return 1;
             }
         }
 
