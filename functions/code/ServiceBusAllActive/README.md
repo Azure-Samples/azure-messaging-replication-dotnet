@@ -78,11 +78,10 @@ the name of the Service Bus queue it copies from source to target.
 
 #### Exemplary topology
 
-For convenience, the project contains an [ARM
-template](https://docs.microsoft.com/azure/event-hubs/event-hubs-resource-manager-namespace-event-hub)
-in the [template folder](template) that allows you to quickly deploy an
-exemplary topology inside a single Service Bus namespace to try things out. The
-general assumption is that you already have a topology in place.
+For convenience, the project contains an ARM template in the [template
+folder](template) that allows you to quickly deploy an exemplary topology inside
+a single Service Bus namespace to try things out. The general assumption is that
+you already have a topology in place.
 
 To make it easier to deal with the various scripts below, let's start with
 setting up a few script variables (Azure Cloud Shell, Bash) defining the names
@@ -130,7 +129,7 @@ You will find the functions in the [Tasks.cs](Tasks.cs) file.
 
 > **IMPORTANT:**<br><br> 
 > The attribute-driven configuration model for Azure Functions written in C# and
-> Java requires that you modify the names of the target and source Event Hubs and
+> Java requires that you modify the names of the target and source Service Bus and
 > the source consumer group in the attribute values to fit your topology names.
 
 ```csharp
@@ -150,16 +149,16 @@ application settings of the Functions application. The [setup](#setup) step belo
 explains how to set those.
 
 The code calls the pre-built helper method
-`EventHubReplicationTasks.ForwardToEventHub` from the
+`ServiceBusReplicationTasks.ForwardToServiceBus` from the
 [`Azure.Messaging.Replication`](/src/Azure.Messaging.Replication/) project which
-also resides in this repository. The method copies the events from the source
-batch to the given Event Hub client while preserving the [correct order for each stream](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#service-assigned-metadata) and [adding annotations for service-assigned metadata](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#streams-and-order-preservation).
+also resides in this repository. The method copies the messages from the source
+batch to the given topic client while preserving the [correct order for each stream](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-federation-patterns#service-assigned-metadata) and [adding annotations for service-assigned metadata](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-federation-patterns#streams-and-order-preservation).
 
-The alternative `EventHubReplicationTasks.ConditionalForwardToEventHub` method
+The alternative `ServiceBusReplicationTasks.ConditionalForwardToServiceBus` method
 allows the application to pass a factory callback of type
-`Func<EventData,EventData>`. The callback can suppress forwarding of a specific
-event by returning `null` and therefore act as a filter. The callback can also
-drop information from the event (reduce) or add information to it (enrich), and
+`Func<Message,Message>`. The callback can suppress forwarding of a specific
+message by returning `null` and therefore act as a filter. The callback can also
+drop information from the message (reduce) or add information to it (enrich), and
 it can transcode or transform the payload.
 
 A published NuGet assembly is not available, but will be made available
@@ -169,7 +168,7 @@ later as part of an update to the Azure Functions runtime.
 
 Before we can deploy and run the replication application, we need to create an
 Azure Functions host and then configure that host such that the connection
-strings for the source and target Event Hubs are available for the replication
+strings for the source and target Service Bus are available for the replication
 task to use.
 
 > **NOTE**<br><br>
@@ -198,7 +197,7 @@ Use the following commands to create these items.
 
     The [az login](/cli/azure/reference-index#az_login) command signs you into your Azure account.
 
-2. Reuse the resource group of your Event Hub(s) or create a new one: 
+2. Reuse the resource group of your topic(s) or create a new one: 
 
     ```azurecli
     az group create --name $USER_RESOURCE_GROUP --location $AZURE_LOCATION
@@ -213,7 +212,7 @@ Use the following commands to create these items.
     az storage account create --name $USER_STORAGE_ACCOUNT --location $AZURE_LOCATION --resource-group $USER_RESOURCE_GROUP --sku Standard_LRS
     ```
 
-    The [az storage account create](/cli/azure/storage/account#az_storage_account_create) command creates the storage account. The storage account is required for Azure Functions to manage its internal state and is also used to keep the checkpoints for the source Event Hubs.
+    The [az storage account create](/cli/azure/storage/account#az_storage_account_create) command creates the storage account. The storage account is required for Azure Functions to manage its internal state and is also used to keep the checkpoints for the source Service Bus.
 
      Set USER_STORAGE_ACCOUNT to a name that is appropriate to you and unique in Azure Storage. Names must contain three to 24 characters numbers and lowercase letters only. `Standard_LRS` specifies a general-purpose account, which is [supported by Functions](../articles/azure-functions/storage-considerations.md#storage-account-requirements).
 
@@ -236,16 +235,16 @@ The task above has two attribute `Connection` property values:
 - On the trigger attribute, there's a "jobs-source-connection" value:<br>
   `[ServiceBusTrigger(TopicName = "jobs", SubscriptionName = "repl", Connection = "jobs-source-connection")]`
 - On the output binding attribute, there's a "jobs-target-connection" value:<br>
-  `[EventHub("jobs", Connection = "jobs-target-connection")]`
+  `[ServiceBus("jobs", Connection = "jobs-target-connection")]`
 
-Those values directly correspond to entries in the function app's [application settings](https://docs.microsoft.com/azure/azure-functions/functions-how-to-use-azure-function-app-settings#settings) and we will set those to valid connection strings for the respective Event Hub.
+Those values directly correspond to entries in the function app's [application settings](https://docs.microsoft.com/azure/azure-functions/functions-how-to-use-azure-function-app-settings#settings) and we will set those to valid connection strings for the respective topic.
 
 ##### Configure the connections
 
-On the source Event Hub, we will add (or reuse) a SAS authorization rule that is to be used to retrieve messages from the Event Hub. The authorization rule is created on the source Event Hub directly and limited to the 'Listen' permission.
+On the source topic, we will add (or reuse) a SAS authorization rule that is to be used to retrieve messages from the topic. The authorization rule is created on the source topic directly and limited to the 'Listen' permission.
 
 > **NOTE**<br><br>
-> The Azure Functions trigger for Event Hubs does not yet support role-based access control integration for managed identities.
+> The Azure Functions trigger for Service Bus does not yet support role-based access control integration for managed identities.
 
 ``` azurecli
 az servicebus topic authorization-rule create \
@@ -256,7 +255,7 @@ az servicebus topic authorization-rule create \
                           --rights listen
 ```
 
-We will then [obtain the primary connection string](https://docs.microsoft.com/azure/event-hubs/event-hubs-get-connection-string) for the rule and transfer that into the application settings, here using the bash Azure Cloud Shell:
+We will then [obtain the primary connection string](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-get-connection-string) for the rule and transfer that into the application settings, here using the bash Azure Cloud Shell:
 
 ```azurecli
 cxnstring = $(az servicebus topic authorization-rule keys list \
@@ -283,7 +282,7 @@ az servicebus topic authorization-rule create \
                           --rights send
 ```
 
-We will then again [obtain the primary connection string](https://docs.microsoft.com/azure/event-hubs/event-hubs-get-connection-string) for the rule and transfer that into the application settings:
+We will then again [obtain the primary connection string](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-get-connection-string) for the rule and transfer that into the application settings:
 
 ```azurecli
 cxnstring = $(az servicebus topic authorization-rule keys list \
