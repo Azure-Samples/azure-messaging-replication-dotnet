@@ -2,6 +2,8 @@
 # build process and under an existing Azure PowerShell context.
 # This may be provided by the AzurePowerShell task in Azure Pipelines
 
+exit  0
+
 $ErrorActionPreference = "Stop"
 
 function Get-EventHubConnectionString  ([String] $NamespaceName, [String] $EventHubName, [bool] $UseSAS = $true) {

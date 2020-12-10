@@ -1,69 +1,272 @@
-## Event Hub to Event Hub Copy
+## Event Hub to Event Hub Copy (C#)
 
-This project builds on the [baseline application](../CodeBaseApp/README.md) and
-provides a pre-configured task that copies event streams between two Event Hubs.
-The project also included an Azure Resource manage template to easily deploy an
-Event Hub namespace and two Event Hubs, so that you can quickly try things out.
+This project illustrates how to build and deploy a simple copy replication
+function that moves data between two Azure Event Hubs.
 
-The project implements a single function,
-[`Eh1ToEh2`](EventHubToEventHubCopy.cs) that references the included library of
-standard tasks (`Azure.Messaging.Replication`), which is generally recommended.
+It is assumed that you are familiar with Event Hubs and know how to create them
+either through [Azure Portal](https://docs.microsoft.com/azure/event-hubs/event-hubs-create),
+[Azure CLI](https://docs.microsoft.com/azure/event-hubs/event-hubs-quickstart-cli),
+[Azure PowerShell](https://docs.microsoft.com/azure/event-hubs/event-hubs-quickstart-powershell), or
+[ARM Templates](https://docs.microsoft.com/azure/event-hubs/event-hubs-resource-manager-namespace-event-hub).
 
-The relevant code is a simple as this:
+It is furthermore assumed that you have read the Event Hubs Federation guidance (
+[Overview](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-overview),
+[Functions](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-replicator-functions),
+[Patterns](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns)), and
+have a scenario for your replication project in mind.
+
+The [replication](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#replication)
+and [merge](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#merge)
+patterns can be readily implemented with this project.
+
+### Replication topology 
+
+For configuring and running this replication function, you need two Event Hubs,
+either inside the same namespace or in different namespaces that may be located
+in different Azure regions.
+
+We will refer to the Event Hubs from which events are to be replicated as the
+*source* and the Event Hub into which messages are replicated the *target*.
+
+On the *source* Event Hub, you will need to create a dedicated [consumer
+group](https://docs.microsoft.com/azure/event-hubs/event-hubs-features#consumer-groups)
+for the replication function that will allow the functions to manage scaling and
+keep track of its progress on the source event hub.
+
+The following diagram shows an exemplary topology with a suggested convention
+for naming the various elements. Here, the replication function name reflects
+the name of the Event Hub it mirrors from source to target, and the consumer
+group name on the *source* reflects the replication app and function name.
+
+If the Event Hubs have different names, you might reflect that in the function
+name as `source_target`. The naming is ultimately up to you and will follow
+whatever conventions you define for your scenario.
+
+```markdown
+              Source Event Hub                              Replication App              Target Event Hub
++-----------------------------------------------------+ +-------------------------+  +-----------------------+              
+|             Namespace (West Europe)                 | |      Function App       |  | Namespace (East US 2) |
+|               "example-eh-weu"                      | | "repl-example-weu-eus2" |  |  "example-eh-eus2"    |
+|                                                     | |                         |  |                       |
+| +-------------+                                     | |      +-------------+    |  |   +---------------+   |
+  |             +-----------------------------------+          | Replication |           |               |
+  |  Event Hub  |     Consumer Group                |          |  Function   |           |   Event Hub   | 
+  |             | "repl-example-weu-eus2.telemetry" |---->-----|             |----->-----|               |
+  | "telemetry" |                                   |          | "telemetry" |           |  "telemetry"  |
+  |             +-----------------------------------+          |             |           |               |
+  +-------------+                                              +-------------+           +---------------+
+```
+
+#### Exemplary topology
+
+For convenience, the project contains an [ARM
+template](https://docs.microsoft.com/azure/event-hubs/event-hubs-resource-manager-namespace-event-hub)
+in the [template folder](template) that allows you to quickly deploy an
+exemplary topology inside a single Event Hub namespace to try things out. The
+general assumption is that you already have a topology in place.
+
+You can deploy the template as follows, replacing the exemplary resource group
+and namespace names to make them unique and choosing your preferred region.
+
+First, if you have not done so, log into your account:
+
+```azurecli
+az login
+```
+
+The [az login](/cli/azure/reference-index#az_login) command signs you into your Azure account.
+
+```azurecli
+az group create --location "westeurope" --name "example-eh"
+az deployment group create --resource-group "example-eh" \
+                           --template-file "template\azuredeploy.json" \
+                           --parameters NamespaceName='example-eh-weu' \
+                                        FunctionAppName='repl-example-weu' 
+```
+
+The created Event Hubs are named "telemetry" and "telemetry-copy". The name of
+the consumer group created on "telemetry" is prefixed with the function app
+name, e.g. "repl-example-weu.telemetry"
+
+### Building, Configuring, and Deploying the Replication App
+
+Leaning on the naming conventions of the exemplary topology, the project
+implements one replication task named "telemetry" that performs the copy.
+
+You will find this function in the [Tasks.cs](Tasks.cs) file. If you build a
+replication app with multiple tasks, you can add all tasks into this one file.
+You will always have a dedicated replication task for each pair of source and
+target.
+
+> **IMPORTANT:**<br><br> 
+> The attribute-driven configuration model for Azure Functions written in C# and
+> Java requires that you modify the names of the target and source Event Hubs and
+> the source consumer group in the attribute values to fit your topology names.
 
 ```csharp
-[FunctionName("Eh1ToEh2")]
-public static Task Eh1ToEh2(
-    [EventHubTrigger("eh1", ConsumerGroup = "Eh1ToEh2", Connection = "Eh1ToEh2-source-connection")] EventData[] input,
-    [EventHub("eh2", Connection = "Eh1ToEh2-target-connection")] IAsyncCollector<EventData> output,
+[FunctionName("telemetry")]
+[ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
+public static Task Telemetry(
+    [EventHubTrigger("telemetry", ConsumerGroup = "repl-example-weu.telemetry", Connection = "telemetry-source-connection")] EventData[] input,
+    [EventHub("telemetry-copy", Connection = "telemetry-target-connection")] EventHubClient outputClient,
     ILogger log)
 {
-    return EventHubReplicationTasks.ForwardToEventHub(input, output, log);
+    return EventHubReplicationTasks.ForwardToEventHub(input, outputClient, log);
 }
 ```
 
-The `Connection` values refer to the name of configuration entries in the
-application settings of the Functions application. The configuration step below
-sets these.
+The `Connection` attribute values refer to the name of configuration entries in the
+application settings of the Functions application. The [setup](#setup) step below
+explains how to set those.
 
-As explained in the baseline application description, you can also modify the
-event while your code is in control.
+The code calls the pre-built helper method
+`EventHubReplicationTasks.ForwardToEventHub` from the
+[`Azure.Messaging.Replication`](/src/Azure.Messaging.Replication/) project which
+also resides in this repository. The method copies the events from the source
+batch to the given Event Hub client while preserving the [correct order for each stream](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#service-assigned-metadata) and [adding annotations for service-assigned metadata](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns#streams-and-order-preservation).
+
+The alternative `EventHubReplicationTasks.ConditionalForwardToEventHub` method
+allows the application to pass a factory callback of type
+`Func<EventData,EventData>`. The callback can suppress forwarding of a specific
+event by returning `null` and therefore act as a filter. The callback can also
+drop information from the event (reduce) or add information to it (enrich), and
+it can transcode or transform the payload.
+
+A published NuGet assembly is not available, but will be made available
+later as part of an update to the Azure Functions runtime.
 
 ### Setup
 
-This example includes an Azure Resource Manager template that creates a new
-standard Event Hub namespace and two Event Hubs, named "eh1" and "eh2. You can
-deploy the template into a new or existing resource group with the included
-PowerShell script, for example:
+Before we can deploy and run the replication application, we need to create an
+Azure Functions host and then configure that host such that the connection
+strings for the source and target Event Hubs are available for the replication
+task to use.
 
-```powershell
-.\Deploy-Resources.ps1 -ResourceGroupName myresourcegroup -Location westeurope -NamespaceName -mynamespace
+> **NOTE**<br><br>
+> Mind that all shown parameter values are examples and you will have to adapt them to
+> your chosen names for resource groups and namespaces and function applications.
+
+#### Create the Functions App
+
+> **NOTE**<br><br>In the [templates](/templates/README.md) folder of this repository, you will
+find a set of ARM templates that simplify this step.
+
+Before you can deploy your function code to Azure, you need to create three resources:
+
+- A resource group, which is a logical container for related resources.
+- A Storage account, which maintains state and other information about your projects.
+- A function app, which provides the environment for executing your function code. A function app maps to your local function project and lets you group functions as a logical unit for easier management, deployment, and sharing of resources.
+
+Use the following commands to create these items. 
+
+1. If you haven't done so already, sign in to Azure:
+
+    Azure CLI
+    ```azurecli
+    az login
+    ```
+
+    The [az login](/cli/azure/reference-index#az_login) command signs you into your Azure account.
+
+2. Reuse the resource group of your Event Hub(s) or create a new one: 
+
+    ```azurecli
+    az group create --name example-eh --location westeurope
+    ```
+    
+    The [az group create](/cli/azure/group#az_group_create) command creates a resource group. You generally create your resource group and resources in a region near you, using an available region returned from the `az account list-locations` command.
+
+    
+3. Create a general-purpose storage account in your resource group and region:
+
+    ```azurecli
+    az storage account create --name <STORAGE_NAME> --location westeurope --resource-group example-eh --sku Standard_LRS
+    ```
+
+    The [az storage account create](/cli/azure/storage/account#az_storage_account_create) command creates the storage account. The storage account is required for Azure Functions to manage its internal state and is also used to keep the checkpoints for the source Event Hubs.
+
+    Replace `<STORAGE_NAME>` with a name that is appropriate to you and unique in Azure Storage. Names must contain three to 24 characters numbers and lowercase letters only. `Standard_LRS` specifies a general-purpose account, which is [supported by Functions](../articles/azure-functions/storage-considerations.md#storage-account-requirements).
+
+
+4. Create an Azure Functions app 
+        
+    ```azurecli
+    az functionapp create --resource-group example-eh --consumption-plan-location westeurope --runtime dotnet --functions-version 3 --name <APP_NAME> --storage-account <STORAGE_NAME>
+    ```
+    The [az functionapp create](/cli/azure/functionapp#az_functionapp_create) command creates the function app in Azure. 
+    
+    Replace `<STORAGE_NAME>` with the name of the account you used in the previous step, and replace `<APP_NAME>` with a globally unique name appropriate to you. The `<APP_NAME>` is also the default DNS domain for the function app. 
+    
+    This command creates a function app running in your specified language runtime under the [Azure Functions Consumption Plan](functions-scale.md#consumption-plan), which is free for the amount of usage you incur here. The command also provisions an associated Azure Application Insights instance in the same resource group, with which you can monitor your function app and view logs. For more information, see [Monitor Azure Functions](functions-monitoring.md). The instance incurs no costs until you activate it.
+
+#### Configure the Function App
+
+The task above has two attribute `Connection` property values:
+
+- On the trigger attribute, there's a "telemetry-source-connection" value:<br>
+  `[EventHubTrigger("telemetry", ConsumerGroup = "repl-example-weu.telemetry", Connection = "telemetry-source-connection")]`
+- On the output binding attribute, there's a "telemetry-target-connection" value:<br>
+  `[EventHub("telemetry-copy", Connection = "telemetry-target-connection")]`
+
+Those values directly correspond to entries in the function app's [application settings](https://docs.microsoft.com/azure/azure-functions/functions-how-to-use-azure-function-app-settings#settings) and we will set those to valid connection strings for the respective Event Hub.
+
+##### Configure the source
+
+On the source Event Hub, we will add (or reuse) a SAS authorization rule that is to be used to retrieve messages from the Event Hub. The authorization rule is created on the source Event Hub directly and limited to the 'Listen' permission.
+> **NOTE**<br><br>
+> The Azure Functions trigger for Event Hubs does not yet support roled-based access control integration for managed identities.
+
+``` azurecli
+az eventhubs eventhub authorization-rule create \
+                          --resource-group example-eh \
+                          --namespace-name example-eh-weu \
+                          --eventhub-name telemetry \
+                          --name replication-listen \
+                          --rights listen
 ```
 
-After this step, you will need to build the project and configure the [existing
-Function application host](../../../templates/README.md).
+We will then [obtain the primary connection string](https://docs.microsoft.com/azure/event-hubs/event-hubs-get-connection-string) for the rule and transfer that into the application settings, here using the bash Azure Cloud Shell:
 
-The  `Configure-Function.ps1` Powershell script calls the shared
-[Update-PairingConfiguration.ps1](../../../scripts/powershell/README.md)
-Powershell script and needs to be run once for each task in an existing Function
-app, for the configured pairing.
-
-For the task at hand, you will configure the Function application and the
-permissions on the messaging resources like this. Mind that we host both Event
-Hubs in the same namespace to keep the example simple. 
-
-```powershell
-Configure-Function.ps1  -FunctionAppName "myreplicationapp"
-                        -TaskName "Eh1ToEh2"
-                        -SourceNamespaceName "mynamespace"
-                        -SourceEventHubName "eh1"
-                        -TargetNamespaceName "mynamespace"
-                        -TargetQueueName "eh2"
+```azurecli
+cxnstring = $(az eventhubs eventhub authorization-rule keys list \
+                    --resource-group example-eh \
+                    --namespace-name example-eh-weu \
+                    --eventhub-name telemetry \
+                    --name replication-listen \
+                    --output=json | jq -r .primaryConnectionString)
+az functionapp config appsettings set --name repl-example-weu \
+                    --resource-group example-eh \
+                    --settings "telemetry-source-connection=$cxnstring"
 ```
 
-To cleanup the Event Hub, you can use the supplied `Remove-EventHub.ps1` script.
+#### Configure the target
 
-### Deployment
+Configuring the target is very similar, but you will create or reuse a SAS rule that grants "Send" permission:
+
+``` azurecli
+az eventhubs eventhub authorization-rule create \
+                          --resource-group example-eh \
+                          --namespace-name example-eh-weu \
+                          --eventhub-name telemetry-copy \
+                          --name replication-send \
+                          --rights send
+```
+
+We will then again [obtain the primary connection string](https://docs.microsoft.com/azure/event-hubs/event-hubs-get-connection-string) for the rule and transfer that into the application settings:
+
+```azurecli
+cxnstring = $(az eventhubs eventhub authorization-rule keys list \
+                    --resource-group example-eh \
+                    --namespace-name example-eh-weu \
+                    --eventhub-name telemetry-copy \
+                    --name replication-send \
+                    --output=json | jq -r .primaryConnectionString)
+az functionapp config appsettings set --name repl-example-weu \
+                    --resource-group example-eh \
+                    --settings "telemetry-target-connection=$cxnstring"
+```
+
+#### Deploying the application
 
 Replication applications are regular Azure Function applications and you can
 therefore use any of the [available deployment
@@ -72,8 +275,16 @@ For testing, you can also run the [application
 locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local),
 but with the messaging services in the cloud.
 
-Using the Azure Functions tools, the simplest way to deploy the application is 
+Using the Azure Functions tools, the simplest way to deploy the application is to run the Core Function Tools CLI trool from ther project directory:
 
-```powershell
-func azure functionapp publish "myreplicationapp" --force
+```azurecli
+func azure functionapp publish "repl-example-weu" --force
 ```
+
+### Monitoring
+
+To learn how you can monitor your replication app, please refer to the [monitoring section](https://docs.microsoft.com/azure/azure-functions/configure-monitoring?tabs=v2) of the Azure Functions documentation.
+
+A particularly useful visual tool for monitoring replication tasks is the Application Insights [Application Map](https://docs.microsoft.com/azure/azure-monitor/app/app-map), which is automatically generated from the captured monitoring information and allows exploring the reliability and performance of the replication task sosurce and target transfers.
+
+For immediate diagnostic insights, you can work with the [Live Metrics](https://docs.microsoft.com/azure/azure-monitor/app/live-stream) portal tool, which provides low latency visualization of log details.

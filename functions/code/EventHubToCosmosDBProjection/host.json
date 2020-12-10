@@ -13,7 +13,8 @@
             "batchCheckpointFrequency": 1,
             "eventProcessorOptions": {
                 "maxBatchSize": 5000,
-                "prefetchCount": 200                
+                "prefetchCount": 200
+
             }
         },
         "serviceBus": {

@@ -3,10 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "namespaceName": {
-      "value": ""
-    },
-    "functionAppName": {
-      "value": ""
+      "value": "GEN-UNIQUE-12"
     }
   }
 }

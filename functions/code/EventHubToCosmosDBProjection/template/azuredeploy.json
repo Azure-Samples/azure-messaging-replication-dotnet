@@ -5,13 +5,7 @@
     "namespaceName": {
       "type": "string",
       "metadata": {
-        "description": "Name of the Event Hub namespace."
-      }
-    },
-    "functionAppName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the replication function application."
+        "description": "Specifies a project name that is used to generate the Event Hub name and the Namespace name."
       }
     },
     "location": {
@@ -32,8 +26,8 @@
   },
   "variables": {
     "eventHubNamespaceName": "[parameters('namespaceName')]",
-    "sourceEventHub": "telemetry",
-    "targetEventHub": "telemetry-copy"
+    "eventHubName1": "eh1",
+    "eventHubName2": "eh2"
   },
   "resources": [
     {
@@ -54,39 +48,28 @@
     {
       "type": "Microsoft.EventHub/namespaces/eventhubs",
       "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('sourceEventHub'))]",
+      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName1'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
       ],
       "properties": {
         "messageRetentionInDays": 1,
-        "partitionCount": 4
+        "partitionCount": 16
       }
     },
     {
       "type": "Microsoft.EventHub/namespaces/eventhubs",
       "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('targetEventHub'))]",
+      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName2'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
       ],
       "properties": {
         "messageRetentionInDays": 7,
-        "partitionCount": 4
+        "partitionCount": 16
       }
-    },
-    {
-      "type": "Microsoft.EventHub/namespaces/eventhubs/consumergroups",
-      "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('sourceEventHub'), '/', parameters('functionAppName'), '.', variables('sourceEventHub'))]",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.EventHub/namespaces/eventhubs', variables('eventHubNamespaceName'), '/', variables('sourceEventHub'))]",
-        "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
-      ],
-      "properties": {}
     }
   ]
 }
