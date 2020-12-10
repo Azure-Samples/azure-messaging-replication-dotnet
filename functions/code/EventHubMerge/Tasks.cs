@@ -11,22 +11,22 @@ namespace EventHubToEventHubMerge
     public static class Tasks
     {
         static const string functionAppName = "merge-example";
-        static const string taskTelemetryLeftToRight = "telemetry-westeurope-to-eastus2";
-        static const string taskTelemetryRightToLeft =  "telemetry-eastus2-to-westeurope";
+        static const string taskTelemetryLeft = "telemetry-westeurope-to-eastus2";
+        static const string taskTelemetryRight =  "telemetry-eastus2-to-westeurope";
         static const string rightEventHubName = "telemetry";
         static const string leftEventHubName = "telemetry";
         static const string rightEventHubConnection = "telemetry-eus2-connection";
         static const string leftEventHubConnection = "telemetry-weu-connection";
         
-        [FunctionName(taskTelemetryLeftToRight)]
+        [FunctionName(taskTelemetryLeft)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
-        public static Task TelemetryLeftToRight(
-            [EventHubTrigger(leftEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryLeftToRight}", Connection = leftEventHubConnection)] EventData[] input,
+        public static Task TelemetryLeft(
+            [EventHubTrigger(leftEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryLeft}", Connection = leftEventHubConnection)] EventData[] input,
             [EventHub(rightEventHubName, Connection = rightEventHubConnection)] EventHubClient outputClient,
             ILogger log)
         {
             return EventHubReplicationTasks.ConditionalForwardToEventHub(input, outputClient, log, (inputEvent) => {
-                const string replyTarget = $"{functionAppName}.{taskTelemetryLeftToRight}";
+                const string replyTarget = $"{functionAppName}.{taskTelemetryLeft}";
                 if ( !inputEvent.Properties.ContainsKey("repl-target") || 
                      !string.Equals(inputEvent.Properties["repl-target"] as string, leftEventHubName) {
                       inputEvent.Properties["repl-target"] = rightEventHubName;
@@ -36,10 +36,10 @@ namespace EventHubToEventHubMerge
             });
         }
 
-        [FunctionName(taskTelemetryRightToLeft)]
+        [FunctionName(taskTelemetryRight)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
-        public static Task TelemetryRightToLeft(
-            [EventHubTrigger(rightEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryRightToLeft}", Connection = rightEventHubConnection)] EventData[] input,
+        public static Task TelemetryRight(
+            [EventHubTrigger(rightEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryRight}", Connection = rightEventHubConnection)] EventData[] input,
             [EventHub(leftEventHubName, Connection = leftEventHubConnection)] EventHubClient outputClient,
             ILogger log)
         {

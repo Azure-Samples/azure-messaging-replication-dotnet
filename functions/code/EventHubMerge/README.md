@@ -67,6 +67,21 @@ in the [template folder](template) that allows you to quickly deploy an
 exemplary topology with two Event Hub namespaces to try things out. The
 general assumption is that you already have a topology in place.
 
+To make it easier to deal with the various scripts below, let's start with
+setting up a few script variables (Azure Cloud Shell, Bash) defining the names
+of the resources we will set up. You will have to define your own unique names
+for all variables prefixed with 'USER_'.
+
+```bash
+AZURE_LOCATION=westeurope
+USER_RESOURCE_GROUP=example-eh-weu
+USER_LEFT_NAMESPACE_NAME=example-eh1-weu
+USER_RIGHT_NAMESPACE_NAME=example-eh2-weu
+USER_FUNCTIONS_APP_NAME=example-eh-weu
+USER_STORAGE_ACCOUNT=exampleehweu
+```
+
+
 You can deploy the template as follows, replacing the exemplary resource group
 and namespace names to make them unique and choosing your preferred region.
 
@@ -79,11 +94,12 @@ az login
 The [az login](/cli/azure/reference-index#az_login) command signs you into your Azure account.
 
 ```azurecli
-az group create --location "westeurope" --name "example-eh"
-az deployment group create --resource-group "example-eh" \
-                           --template-file "template\azuredeploy.json" \
-                           --parameters NamespaceNamePrefix='example-eh-weu' \
-                                        FunctionAppName='repl-example-weu' 
+az group create --location $AZURE_LOCATION --name $USER_RESOURCE_GROUP
+az deployment group create --resource-group $USER_RESOURCE_GROUP \
+                           --template-file 'template\azuredeploy.json' \
+                           --parameters LeftNamespaceName='$USER_LEFT_NAMESPACE_NAME' \
+                                        RightNamespaceName='$USER_RIGHT_NAMESPACE_NAME' \
+                                        FunctionAppName='$USER_FUNCTIONS_APP_NAME' 
 ```
 
 The created Event Hubs are named "telemetry" in both namespaces. The name of
@@ -222,7 +238,7 @@ Use the following commands to create these items.
 2. Reuse the resource group of your Event Hub(s) or create a new one: 
 
     ```azurecli
-    az group create --name example-eh --location westeurope
+    az group create --name $USER_RESOURCE_GROUP --location $AZURE_LOCATION
     ```
     
     The [az group create](/cli/azure/group#az_group_create) command creates a resource group. You generally create your resource group and resources in a region near you, using an available region returned from the `az account list-locations` command.
@@ -231,42 +247,43 @@ Use the following commands to create these items.
 3. Create a general-purpose storage account in your resource group and region:
 
     ```azurecli
-    az storage account create --name <STORAGE_NAME> --location westeurope --resource-group example-eh --sku Standard_LRS
+    az storage account create --name $USER_STORAGE_ACCOUNT --location $AZURE_LOCATION --resource-group $USER_RESOURCE_GROUP --sku Standard_LRS
     ```
 
     The [az storage account create](/cli/azure/storage/account#az_storage_account_create) command creates the storage account. The storage account is required for Azure Functions to manage its internal state and is also used to keep the checkpoints for the source Event Hubs.
 
-    Replace `<STORAGE_NAME>` with a name that is appropriate to you and unique in Azure Storage. Names must contain three to 24 characters numbers and lowercase letters only. `Standard_LRS` specifies a general-purpose account, which is [supported by Functions](../articles/azure-functions/storage-considerations.md#storage-account-requirements).
+    Set USER_STORAGE_ACCOUNT to a name that is appropriate to you and unique in Azure Storage. Names must contain three to 24 characters numbers and lowercase letters only. `Standard_LRS` specifies a general-purpose account, which is [supported by Functions](../articles/azure-functions/storage-considerations.md#storage-account-requirements).
 
 
 4. Create an Azure Functions app 
         
     ```azurecli
-    az functionapp create --resource-group example-eh --consumption-plan-location westeurope --runtime dotnet --functions-version 3 --name <APP_NAME> --storage-account <STORAGE_NAME>
+    az functionapp create --resource-group $USER_RESOURCE_GROUP --consumption-plan-location $AZURE_LOCATION --runtime dotnet --functions-version 3 --name $USER_FUNCTIONS_APP_NAME --storage-account $USER_STORAGE_ACCOUNT
     ```
     The [az functionapp create](/cli/azure/functionapp#az_functionapp_create) command creates the function app in Azure. 
-    
-    Replace `<STORAGE_NAME>` with the name of the account you used in the previous step, and replace `<APP_NAME>` with a globally unique name appropriate to you. The `<APP_NAME>` is also the default DNS domain for the function app. 
-    
+
+    Set USER_FUNCTIONS_APP_NAME to a globally unique name appropriate to you. The USER_FUNCTIONS_APP_NAME value is also the default DNS domain prefix for the function app.
+
     This command creates a function app running in your specified language runtime under the [Azure Functions Consumption Plan](functions-scale.md#consumption-plan), which is free for the amount of usage you incur here. The command also provisions an associated Azure Application Insights instance in the same resource group, with which you can monitor your function app and view logs. For more information, see [Monitor Azure Functions](functions-monitoring.md). The instance incurs no costs until you activate it.
+
 
 #### Configure the Function App
 
-The exemplary task refers to a *right* Event Hub connection ("telemetry-eus2_connection") and a *left* Event Hub connection ("telemetry-weu-connection") for the trugger and output binding attribute `Connection` property values:
+The exemplary task refers to a *right* Event Hub connection ("telemetry-eus2_connection") and a *left* Event Hub connection ("telemetry-weu-connection") for the trigger and output binding attribute `Connection` property values:
 
 Those values directly correspond to entries in the function app's [application settings](https://docs.microsoft.com/azure/azure-functions/functions-how-to-use-azure-function-app-settings#settings) and we will set those to valid connection strings for the respective Event Hub.
 
 ##### Configure the connections
 
-On the both Event Hubs, we will add (or reuse) a SAS authorization rule that is to be used to send and retrieve events. The authorization rule is created on the Event Hubs directly and specifies both 'Listen' and 'Send' permissions. The example below shows only one of the two sides.
+On the both Event Hubs, we will add (or reuse) a SAS authorization rule that is to be used to send and retrieve events. The authorization rule is created on the Event Hubs directly and specifies both 'Listen' and 'Send' permissions. The example below shows only the left side; the right side is equivalent.
 
 > **NOTE**<br><br>
-> The Azure Functions trigger for Event Hubs does not yet support roled-based access control integration for managed identities.
+> The Azure Functions trigger for Event Hubs does not yet support role-based access control integration for managed identities.
 
 ``` azurecli
 az eventhubs eventhub authorization-rule create \
-                          --resource-group example-eh \
-                          --namespace-name example-eh-weu \
+                          --resource-group $USER_RESOURCE_GROUP \
+                          --namespace-name $USER_LEFT_NAMESPACE_NAME \
                           --eventhub-name telemetry \
                           --name replication-sendlisten \
                           --rights send,listen
@@ -276,13 +293,13 @@ We will then [obtain the primary connection string](https://docs.microsoft.com/a
 
 ```azurecli
 cxnstring = $(az eventhubs eventhub authorization-rule keys list \
-                    --resource-group example-eh \
-                    --namespace-name example-eh-weu \
+                    --resource-group $USER_RESOURCE_GROUP \
+                    --namespace-name $USER_LEFT_NAMESPACE_NAME \
                     --eventhub-name telemetry \
                     --name replication-sendlisten \
                     --output=json | jq -r .primaryConnectionString)
-az functionapp config appsettings set --name repl-example-weu \
-                    --resource-group example-eh \
+az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
+                    --resource-group $USER_RESOURCE_GROUP \
                     --settings "telemetry-weu-connection=$cxnstring"
 ```
 
@@ -295,7 +312,7 @@ For testing, you can also run the [application
 locally](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-local),
 but with the messaging services in the cloud.
 
-Using the Azure Functions tools, the simplest way to deploy the application is to run the Core Function Tools CLI trool from ther project directory:
+Using the Azure Functions tools, the simplest way to deploy the application is to run the Core Function Tools CLI tool from the project directory:
 
 ```azurecli
 func azure functionapp publish "merge-example-weu" --force

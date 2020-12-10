@@ -7,15 +7,15 @@ using Microsoft.Extensions.Logging;
 using Azure.Messaging.Replication;
 using Microsoft.Azure.ServiceBus;
 
-namespace EventHubToEventHubCopy
+namespace ServiceBusCopy
 {
     public static class Tasks
     {
-        [FunctionName("QueueAtoQueueB")]
+        [FunctionName("jobs-transfer")]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
-        public static Task QueueAtoQueueB(
-            [ServiceBusTrigger("queueA", Connection = "QueueAtoQueueB-source-connection")] Message[] input,
-            [ServiceBus("queueB", Connection = "QueueAtoQueueB-target-connection")] IAsyncCollector<Message> output,
+        public static Task JobsTransfer(
+            [ServiceBusTrigger("jobs-transfer", Connection = "jobs-transfer-source-connection")] Message[] input,
+            [ServiceBus("jobs", Connection = "jobs-target-connection")] IAsyncCollector<Message> output,
             ILogger log)
         {
             return ServiceBusReplicationTasks.ForwardToServiceBus(input, output, log);

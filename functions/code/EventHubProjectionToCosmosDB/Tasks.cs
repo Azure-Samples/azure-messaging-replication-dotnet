@@ -6,15 +6,15 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace EventHubToCosmosDbProjection
+namespace EventHubProjectionToCosmosDb
 {
     public static class Tasks
     {
-        [FunctionName("Eh1ToCosmosDb1Binary")]
+        [FunctionName("telemetry")]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
-        public static async Task Eh1ToCosmosDb1Binary(
-            [EventHubTrigger("eh1", ConsumerGroup = "Eh1ToCosmosDb1", Connection = "Eh1ToCosmosDb1-source-connection")] EventData[] input,
-            [CosmosDB(databaseName: "SampleDB", collectionName: "foo", ConnectionStringSetting = "CosmosDBConnection")] IAsyncCollector<object> output,
+        public static async Task Telemetry(
+            [EventHubTrigger("telemetry", ConsumerGroup = "proj-example-sh.telemetry", Connection = "telemetry-source-connection")] EventData[] input,
+            [CosmosDB(databaseName: "sampledb", collectionName: "telemetry-latest", ConnectionStringSetting = "CosmosDBConnection")] IAsyncCollector<object> output,
             ILogger log)
         {
             foreach (var ev in input)
