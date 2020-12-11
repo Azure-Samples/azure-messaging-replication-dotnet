@@ -1,19 +1,17 @@
----
-page_type: sample
-description: "Azure Messaging Replication Tasks"
-products:
-- GitHub Actions
-- Azure Functions
-- Azure Service Bus
-- Azure Event Hubs
-languages:
-- dotnet
----
-
 ## Azure Messaging Replication Tasks with .NET Core
 
 This project contains a set of samples that demonstrate how to create Azure
 Messaging replication tasks using the Azure Functions runtime with .NET Core.
+
+For using these tasks with Event Hubs, first read the Event Hubs Federation guidance (
+[Overview](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-overview),
+[Functions](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-replicator-functions),
+[Patterns](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns)).
+
+For Service Bus, read the Service bus Federation Guidance (
+[Overview](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-overview),
+[Functions](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-replicator-functions),
+[Patterns](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-patterns))
 
 ### Introduction
 
@@ -75,26 +73,30 @@ git clone https://github.com/Azure-Samples/azure-messaging-replication-dotnet
 ```
 
 The instructions in the [functions/config](functions/config) folder and
-subfolders explain how to configure replication tasks without having to write any code yourself. The provided scripts use the aforementioned tools for configuring the replication tasks.
+subfolders explain how to configure replication tasks without having to write
+any code yourself. The provided scripts use the aforementioned tools for
+configuring the replication tasks.
 
 ### Contents
 
 The following folders are part of this project:
 
+* **[functions/code](functions/code)** - .NET Core Azure Functions projects as starting points for your custom replication tasks that require modification of events or messages as they are being moved:
+   * **[EventHubCopy](functions/code/EventHubCopy)** - Function for copying data between two Event Hubs
+   * **[EventHubMerge](functions/code/EventHubMerge)** - Function for continuously merging two Event Hubs
+   * **[EventHubProjectionToCosmosDB](functions/code/EventHubProjectionToCosmosDB)** - Function for projecting events into a key/value store ("compaction")
+   * **[ServiceBusCopy](functions/code/ServiceBusCopy)** - Function for copying data between two Service Bus Queues
+   * **[ServiceActivePassive](functions/code/ServiceBusActivePassive)** - Function backing up messages in a standby topic or queue
+   * **[ServiceBusAllActive](functions/code/ServiceBusAllActive)** - Function for maintaining mirrored topics acting as queues
+* **[functions/config](functions/config)** - Configuration-only projects, which use the standard replication task library:
+   * **[EventHubCopy](functions/config/EventHubCopy)** - Function for copying data between two Event Hubs
+   * **[EventHubCopyToServiceBus](functions/config/EventHubCopyToServiceBus)** - Function for copying data between two Event Hubs
+   * **[ServiceBusCopy](functions/config/ServiceBusCopy)** - Function for copying data between two Service Bus Queues
+   * **[ServiceBusCopyToEventHub](functions/config/ServiceBusCopyToEventHub)** - Function for copying data between a Service Bus Queue to an Event Hub
 * **[src](src)** - .NET Core libraries implementing replication tasks.
   * **[src/Azure.Messaging.Replication](src/Azure.Messaging.Replication)** - Standard replication tasks
-* **[functions/code](functions/code)** - .NET Core Azure Functions projects as starting points for your custom replication tasks that require modification of events or messages as they are being moved:
-   * **[CodeBaseApp](functions/code/CodeBaseApp)** - Project Template
-   * **[EventHubToEventHubCopy](functions/code/EventHubToEventHubCopy)** - Function for copying data between two Event Hubs
-   * **[ServiceBusToServiceBusCopy](functions/code/ServiceBusToServiceBusCopy)** - Function for copying data between two Service Bus Queues
-* **[functions/config](functions/config)** - Configuration-only projects, which use the standard replication task library:
-   * **[ConfigBaseApp](functions/config/ConfigBaseApp)** - Project Template
-   * **[EventHubToEventHubCopy](functions/config/EventHubToEventHubCopy)** - Function for copying data between two Event Hubs
-   * **[ServiceBusToEventHubCopy](functions/config/ServiceBusToEventHubCopy)** - Function for copying data between a Service Bus Queue to an Event Hub
-   * **[ServiceBusToServiceBusCopy](functions/config/ServiceBusToServiceBusCopy)** - Function for copying data between two Service Bus Queues
-* **[scripts](scripts)** - Helper scripts to configure and deploy replication apps
 * **[templates](templates)** - Azure Resource Manager templates to create properly configured Function app environments 
-* **[test](test)** - Test projects
+* **[test](test)** - Test projects and validation scripts
 
 
 ## Contributing

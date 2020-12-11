@@ -193,7 +193,7 @@ dotnet bin/Debug/netcoreapp3.1/ServiceBusCopyValidation.dll \
 
 retval=$?
 if [ $retval -ne 0 ]; then
-    echo -t "$cxnstring_left" -s "$cxnstring_right" \
+    echo -t \"$cxnstring_left\" -s \"$cxnstring_right\"
     exit 1
 fi
 echo "Validation done"

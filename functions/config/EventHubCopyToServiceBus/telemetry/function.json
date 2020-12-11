@@ -10,9 +10,9 @@
         },
         {
             "direction": "out",
-            "type": "servcieBus",
+            "type": "serviceBus",
             "connection": "EventHubAToEventHubB-target-connection",
-            "eventHubName": "eventHubB",
+            "eventHubName": "queueA",
             "name": "output"
         }
     ],
