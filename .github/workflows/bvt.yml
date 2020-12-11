@@ -1,6 +1,5 @@
 name: Check-In Validation Test
 
-
 on:
   push:
     branches: [ main ]

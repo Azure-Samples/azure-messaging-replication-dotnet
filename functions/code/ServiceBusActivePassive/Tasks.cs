@@ -11,11 +11,11 @@ namespace ServiceBusActivePassive
 {
     public static class Tasks
     {
-        [FunctionName("QueueAtoQueueB")]
+        [FunctionName("jobs")]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
-        public static Task QueueAtoQueueB(
-            [ServiceBusTrigger("queueA", Connection = "QueueAtoQueueB-source-connection")] Message[] input,
-            [ServiceBus("queueB", Connection = "QueueAtoQueueB-target-connection")] IAsyncCollector<Message> output,
+        public static Task Jobs(
+            [ServiceBusTrigger("jobs", "replication", Connection = "jobs-source-connection")] Message[] input,
+            [ServiceBus("jobs", Connection = "jobs-target-connection")] IAsyncCollector<Message> output,
             ILogger log)
         {
             return ServiceBusReplicationTasks.ForwardToServiceBus(input, output, log);

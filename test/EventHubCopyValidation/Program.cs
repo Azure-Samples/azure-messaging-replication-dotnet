@@ -75,6 +75,7 @@ namespace EventHubCopyValidation
 
         public static async Task<int> Run(string[] args, Func<CommandLineSettings, Task<int>> callback)
         {
+            Console.WriteLine("Validation run");
             CommandLineApplication<CommandLineSettings> app = new CommandLineApplication<CommandLineSettings>
             {
                 ModelFactory = () => new CommandLineSettings()

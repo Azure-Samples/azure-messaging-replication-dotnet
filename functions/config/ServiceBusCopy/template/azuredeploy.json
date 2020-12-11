@@ -89,7 +89,8 @@
           "name": "[parameters('rightQueue')]",
           "type": "Queues",
           "dependsOn": [
-            "[concat('Microsoft.ServiceBus/namespaces/', parameters('rightNamespaceName'))]"
+            "[concat('Microsoft.ServiceBus/namespaces/', parameters('rightNamespaceName'))]",
+            "[concat(concat('Microsoft.ServiceBus/namespaces/', parameters('rightNamespaceName')), concat('/Queues/', parameters('leftQueue')))]"
           ],
           "properties": {
             "lockDuration": "PT5M",

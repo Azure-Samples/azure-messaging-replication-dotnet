@@ -1,0 +1,29 @@
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "eventHubTrigger",
+            "connection": "telemetry-source-connection",
+            "consumerGroup": "%telemetry-source-consumergroup%",
+            "eventHubName": "telemetry",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "eventHub",
+            "connection": "telemetry-target-connection",
+            "eventHubName": "telemetry",
+            "name": "output"
+        }
+    ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
+    "disabled": false,
+    "scriptFile": "../bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
+}

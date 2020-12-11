@@ -41,6 +41,7 @@ namespace EventHubCopyValidation
 
         public async Task RunTest()
         {
+            Console.WriteLine("EventHubOrderTest");
             string pk = Guid.NewGuid().ToString();
             var senderCxn = new EventHubsConnectionStringBuilder(targetNamespaceConnectionString)
             {
@@ -63,18 +64,31 @@ namespace EventHubCopyValidation
             sw.Start();
             var tracker = new List<Tuple<string,long>>();
 
-            Console.WriteLine("sending");
-            List<Task> sendTasks = new List<Task>();
-            for (int j = 0; j < 100; j++)
+            int messageCount = 5000;
+            int sizeInBytes = 128;
+            var data = new byte[sizeInBytes];
+            Array.Fill<byte>(data,0xff);
+                
+            int sent = 0;
+            Console.WriteLine($"sending {messageCount} messages of {sizeInBytes} bytes ...");
+            
+            for (int j = 0; j < messageCount; j++)
             {
                 string msgid = Guid.NewGuid().ToString();
 
                 tracker.Add(new Tuple<string, long>(msgid, sw.ElapsedTicks));
-                var eventData = new EventData(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
+                var eventData = new EventData(data);
                 eventData.Properties["message-id"] = msgid;
-                await sendSideClient.SendAsync(eventData, pk);
+                // we need to send those all one-by-one to preserve order during sends
+                await sendSideClient.SendAsync(eventData, pk).ContinueWith(t=>{
+                    int s = Interlocked.Increment(ref sent); 
+                    if ( s % 1000 == 0) {
+                        Console.WriteLine($"sent {s} messages ...");
+                    }
+                });
             }
 
+            
             
             List<Task> receiveTasks = new List<Task>();
 
@@ -84,40 +98,47 @@ namespace EventHubCopyValidation
             {
                 receiveTasks.Add(Task.Run(async () =>
                 {
-
+                    int received = 0;
                     var receiver = receiveSideClient.CreateReceiver(this.sourceConsumerGroup, partitionId,
                         EventPosition.FromEnqueuedTime(start));
+                    Console.WriteLine($"Partition {partitionId} starting ");
                     while (tracker.Count > 0)
                     {
-                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(10));
+                        
+                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(2));
                         if (eventData != null)
                         {
-                            Console.Write($"{partitionId}");
                             foreach (var ev in eventData)
                             {
                                 if ( ev.SystemProperties.PartitionKey != pk)
                                     continue;
 
-                                
                                 string msgid = ev.Properties["message-id"] as string;
                                 Assert.Equal(tracker[0].Item1, msgid); 
                                 durations.Add(sw.ElapsedTicks - tracker[0].Item2);
                                 tracker.RemoveAt(0);
+
+                                int s = Interlocked.Increment(ref received); 
+                                if ( s % 5000 == 0) {
+                                    Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                }
                             }
                         }
                         else
                         {
+                            Console.WriteLine($"Partition {partitionId} empty.");
                             break;
                         }
                     }
+                    Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");
                 }));
             }
-            await Task.WhenAll(sendTasks);
+            
             await Task.WhenAll(receiveTasks);
             Console.WriteLine();
             Assert.Empty(tracker);
 
-            Console.WriteLine(((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond);
+            Console.WriteLine($"Duration {((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond}");
             
         }
     }

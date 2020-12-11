@@ -2,10 +2,22 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "namespaceName": {
+    "leftNamespaceName": {
       "type": "string",
       "metadata": {
-        "description": "Specifies a project name that is used to generate the Event Hub name and the Namespace name."
+        "description": "Name of the left Event Hub namespace."
+      }
+    },
+    "rightNamespaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the right Event Hub namespace."
+      }
+    },
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the replication function application."
       }
     },
     "location": {
@@ -25,15 +37,14 @@
     }
   },
   "variables": {
-    "eventHubNamespaceName": "[parameters('namespaceName')]",
-    "eventHubName1": "eh1",
-    "eventHubName2": "eh2"
+    "leftEventHub": "telemetry",
+    "rightEventHub": "telemetry"
   },
   "resources": [
     {
       "type": "Microsoft.EventHub/namespaces",
       "apiVersion": "2018-01-01-preview",
-      "name": "[variables('eventHubNamespaceName')]",
+      "name": "[parameters('leftNamespaceName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "[parameters('eventHubSku')]",
@@ -48,28 +59,66 @@
     {
       "type": "Microsoft.EventHub/namespaces/eventhubs",
       "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName1'))]",
+      "name": "[concat(parameters('leftNamespaceName'), '/', variables('leftEventHub'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('leftNamespaceName'))]"
       ],
       "properties": {
         "messageRetentionInDays": 1,
-        "partitionCount": 16
+        "partitionCount": 4
+      },
+      "resources": [
+        {
+          "type": "consumergroups",
+          "apiVersion": "2017-04-01",
+          "name": "[concat(parameters('functionAppName'), '.', variables('leftEventHub'))]",
+          "dependsOn": [
+            "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('leftNamespaceName'), variables('leftEventHub'))]"
+          ],
+          "properties": {}
+        }
+      ]
+    },
+
+    {
+      "type": "Microsoft.EventHub/namespaces",
+      "apiVersion": "2018-01-01-preview",
+      "name": "[parameters('rightNamespaceName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('eventHubSku')]",
+        "tier": "[parameters('eventHubSku')]",
+        "capacity": 1
+      },
+      "properties": {
+        "isAutoInflateEnabled": false,
+        "maximumThroughputUnits": 0
       }
     },
     {
       "type": "Microsoft.EventHub/namespaces/eventhubs",
       "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName2'))]",
+      "name": "[concat(parameters('rightNamespaceName'), '/', variables('rightEventHub'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('rightNamespaceName'))]"
       ],
       "properties": {
-        "messageRetentionInDays": 7,
-        "partitionCount": 16
-      }
+        "messageRetentionInDays": 1,
+        "partitionCount": 4
+      },
+      "resources": [
+        {
+          "type": "consumergroups",
+          "apiVersion": "2017-04-01",
+          "name": "[concat(parameters('functionAppName'), '.', variables('rightEventHub'))]",
+          "dependsOn": [
+            "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('rightNamespaceName'), variables('rightEventHub'))]"
+          ],
+          "properties": {}
+        }
+      ]
     }
   ]
 }

@@ -51,10 +51,10 @@ function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation"
+    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubA -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubB -UseSAS $true)" -et eventHubA -es eventHubB -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd
+    popd > /dev/null
     return $result
 }
 
@@ -69,10 +69,10 @@ function Test-EventHubsCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\EventHubToEventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation"
+    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd
+    popd > /dev/null
 
     return $result
 }
@@ -89,7 +89,7 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation"
+    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     if ( $result -ne 0 )
@@ -98,7 +98,7 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
     }
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -et eh2 -es eh1 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd
+    popd > /dev/null
 
     return $result
 }
@@ -119,10 +119,10 @@ function Test-ServiceBusConfigApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\ServiceBusCopyValidation"
+    pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
     & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd
+    popd > /dev/null
     return $result
 }
 
@@ -137,22 +137,22 @@ function Test-ServiceBusCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\ServiceBusCopyValidation"
+    pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
     & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd
+    popd > /dev/null
 
     return $result
 }
 
 Write-Host "Building Test projects"
-pushd "$PSScriptRoot\EventHubCopyValidation"
+pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
 dotnet build "EventHubCopyValidation.csproj" -c Debug 2>&1 > build.log
-popd
+popd > /dev/null
 
-pushd "$PSScriptRoot\ServiceBusCopyValidation"
+pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
 dotnet build "ServiceBusCopyValidation.csproj" -c Debug 2>&1 > build.log
-popd
+popd > /dev/null
 
 Write-Host "Event Hub Scenario Code/Consumption"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"

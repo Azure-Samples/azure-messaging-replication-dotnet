@@ -5,11 +5,11 @@
     "serviceBusNamespaceName": {
       "value": "GEN-UNIQUE"
     },
-    "serviceBusQueueName1": {
-      "value": "GEN-UNIQUE"
+    "serviceBusLeftTopic": {
+      "value": "jobs"
     },
-    "serviceBusQueueName2": {
-      "value": "GEN-UNIQUE"
+    "serviceBusRightTopic": {
+      "value": "jobs"
     }
   }
 }

@@ -65,7 +65,7 @@ namespace ServiceBusCopyValidation
                 sendTasks.Add(sendSideClient.SendAsync(message));
             }
 
-            
+             await Task.WhenAll(sendTasks);
         
             ConcurrentBag<long> durations = new ConcurrentBag<long>();
             Console.Write("receiving: ");
@@ -92,7 +92,7 @@ namespace ServiceBusCopyValidation
                         }
                     }
                 });
-            await Task.WhenAll(sendTasks);
+           
             await receiveTask;
             Console.WriteLine();
             Assert.True(tracker.IsEmpty, $"tracker is not empty: {tracker.Count}");

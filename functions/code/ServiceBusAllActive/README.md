@@ -38,7 +38,80 @@ sent into the primary queue, the primary queue needs to be a topic where a
 
 This example covers bi-directional replication between two such topics. All
 messages sent to either topic will also become available on the respective other
-topic's 'main' subscription. 
+topic's 'main' subscription.
+
+The trick to avoid messages from bouncing back and forth between topics is for
+replicated messages to be marked and then excluded from further replication.
+While this could be done in the replication function, it's more efficient to have
+the broker do this work.
+
+Using the [SQL rule filter
+syntax](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-sql-filter),
+we define a filter rule that excludes messages which have already been
+replicated:
+
+```sql
+replicated <> 1
+```
+
+Using the [SQL rule action syntax](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-messaging-sql-rule-action), we then define an action that sets the property for
+any message that matched the filter:
+
+
+```sql
+SET replicated = 1
+```
+
+When creating the 'replication' topic subscription for either topic, we set the
+filter and the action on a new rule replacing the default rule.
+
+```azurecli
+az servicebus topic subscription create --name replication \
+                                        --resource-group $USER_RESOURCE_GROUP \
+                                        --namespace-name $USER_SB_NAMESPACE_NAME \
+                                        --topic-name $USER_TOPIC_NAME
+az servicebus topic subscription rule create --name 'replication' \
+                                        --resource-group $USER_RESOURCE_GROUP \
+                                        --namespace-name $USER_SB_NAMESPACE_NAME \
+                                        --topic-name $USER_TOPIC_NAME \
+                                        --subscription-name replication \
+                                        --action-sql-expression='SET replicated=1' \
+                                        --filter-sql-expression='replicated<>1'
+```
+
+The equivalent ARM template for a subscription with such a rule is as follows. The template for the exemplary topology included in this sample demonstrates this:
+
+```JSON
+{
+    "apiVersion": "2017-04-01",
+    "name": "replication",
+    "type": "subscriptions",
+    "properties": {},
+    "dependsOn": [
+      "[resourceId('Microsoft.ServiceBus/namespaces/topics', parameters('namespaceName'), parameters('topicName'))]"
+    ],
+    "resources": [
+        {
+            "apiVersion": "2017-04-01",
+            "name": "replication",
+            "type": "rules",
+            "dependsOn": [
+            "[resourceId('Microsoft.ServiceBus/namespaces/topics/subscriptions', parameters('namespaceName'), parameters('topicName'), 'replication')]"
+            ],
+            "properties": {
+                "action": {
+                    "sqlExpression": "SET replication = 1"
+                },
+                "filterType": "SqlFilter",
+                "sqlFilter": {
+                    "sqlExpression": "replication <> 1",
+                    "compatibilityLevel": 20
+                }
+            }
+        }
+    ]
+}
+```
 
 > **NOTE**
 >
@@ -115,9 +188,7 @@ az deployment group create --resource-group $USER_RESOURCE_GROUP \
                                         FunctionAppName='$USER_FUNCTIONS_APP_NAME' 
 ```
 
-The created Service Bus queues are named "jobs-transfer" and "jobs". The name of
-the consumer group created on "telemetry" is prefixed with the function app
-name, e.g. "repl-example-weu.telemetry"
+The created Service Bus queues are named "jobs-transfer" and "jobs".
 
 ### Building, Configuring, and Deploying the Replication App
 
@@ -264,6 +335,12 @@ cxnstring = $(az servicebus topic authorization-rule keys list \
                     --topic-name jobs \
                     --name replication-listen \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group $USER_RESOURCE_GROUP \
                     --settings "jobs-source-connection=$cxnstring"
@@ -291,6 +368,12 @@ cxnstring = $(az servicebus topic authorization-rule keys list \
                     --topic-name jobs \
                     --name replication-send \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group example-eh \
                     --settings "jobs-target-connection=$cxnstring"

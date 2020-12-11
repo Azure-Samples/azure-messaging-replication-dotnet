@@ -42,7 +42,8 @@ a 'main' subscription acts like the queue endpoint for the application, and a
 
 This example covers unidirectional replication from a primary to a secondary
 whereby the secondary serves as backup and is only switched to when the primary
-becomes unavailable.
+becomes unavailable. If you want bi-directional replication, refer to the 
+[ServiceBusAllActive](../ServiceBusAllActive) example.
 
 The following diagram shows an exemplary topology with a suggested convention
 for naming the various elements. Here, the replication function name reflects
@@ -106,9 +107,7 @@ az deployment group create --resource-group $USER_RESOURCE_GROUP \
                                         FunctionAppName='$USER_FUNCTIONS_APP_NAME' 
 ```
 
-The created Service Bus queues are named "jobs-transfer" and "jobs". The name of
-the consumer group created on "telemetry" is prefixed with the function app
-name, e.g. "repl-example-weu.telemetry"
+The created Service Bus queues are named "jobs-transfer" and "jobs". 
 
 ### Building, Configuring, and Deploying the Replication App
 
@@ -120,10 +119,9 @@ replication app with multiple tasks, you can add all tasks into this one file.
 You will always have a dedicated replication task for each pair of source and
 target.
 
-> **IMPORTANT:**<br><br> 
-> The attribute-driven configuration model for Azure Functions written in C# and
-> Java requires that you modify the names of the target and source Service Bus and
-> the source consumer group in the attribute values to fit your topology names.
+> **IMPORTANT:**<br><br> The attribute-driven configuration model for Azure
+> Functions written in C# and Java requires that you modify the names of the
+> target and source entities in the attribute values to fit your topology names.
 
 ```csharp
 [FunctionName("jobs")]
@@ -256,6 +254,12 @@ cxnstring = $(az servicebus topic authorization-rule keys list \
                     --topic-name jobs \
                     --name replication-listen \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group $USER_RESOURCE_GROUP \
                     --settings "jobs-source-connection=$cxnstring"
@@ -283,6 +287,12 @@ cxnstring = $(az servicebus topic authorization-rule keys list \
                     --topic-name jobs \
                     --name replication-send \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group example-eh \
                     --settings "jobs-target-connection=$cxnstring"

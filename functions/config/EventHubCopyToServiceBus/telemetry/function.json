@@ -1,0 +1,28 @@
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "eventHubTrigger",
+            "connection": "EventHubAToEventHubB-source-connection",
+            "eventHubName": "eventHubA",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "servcieBus",
+            "connection": "EventHubAToEventHubB-target-connection",
+            "eventHubName": "eventHubB",
+            "name": "output"
+        }
+    ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
+    "disabled": false,
+    "scriptFile": "../bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.EventHubReplicationTasks.ForwardToEventHub"
+}

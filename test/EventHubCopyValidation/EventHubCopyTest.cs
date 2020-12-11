@@ -41,6 +41,7 @@ namespace EventHubCopyValidation
 
         public async Task RunTest()
         {
+            Console.WriteLine("EventHubCopyTest");
             var senderCxn = new EventHubsConnectionStringBuilder(targetNamespaceConnectionString)
             {
                 EntityPath = targetEventHub
@@ -62,17 +63,29 @@ namespace EventHubCopyValidation
             sw.Start();
             var tracker = new ConcurrentDictionary<string, long>();
 
-            Console.WriteLine("sending");
+            int messageCount = 50000;
+            int sizeInBytes = 128;
+            var data = new byte[sizeInBytes];
+            Array.Fill<byte>(data,0xff);
+                
+            int sent = 0;
+            Console.WriteLine($"sending {messageCount} messages of {sizeInBytes} bytes ...");
             List<Task> sendTasks = new List<Task>();
-            for (int j = 0; j < 1000; j++)
+            for (int j = 0; j < messageCount; j++)
             {
                 string msgid = Guid.NewGuid().ToString();
                 tracker[msgid] = sw.ElapsedTicks;
-                var eventData = new EventData(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
-                eventData.Properties["message-id"] = msgid;
-                sendTasks.Add(sendSideClient.SendAsync(eventData, msgid));
-            }
 
+                var eventData = new EventData(data);
+                eventData.Properties["message-id"] = msgid;
+                sendTasks.Add(sendSideClient.SendAsync(eventData, msgid).ContinueWith(t=>{
+                    int s = Interlocked.Increment(ref sent); 
+                    if ( s % 5000 == 0) {
+                        Console.WriteLine($"sent {s} messages ...");
+                    }
+                }));
+            }
+            await Task.WhenAll(sendTasks);
             
             List<Task> receiveTasks = new List<Task>();
 
@@ -82,13 +95,13 @@ namespace EventHubCopyValidation
             {
                 receiveTasks.Add(Task.Run(async () =>
                 {
-
+                    int received = 0; 
                     var receiver = receiveSideClient.CreateReceiver(this.sourceConsumerGroup, partitionId,
                         EventPosition.FromEnqueuedTime(start));
-                    Console.Write($"{partitionId}, ");
+                    Console.WriteLine($"Partition {partitionId} starting ");
                     while (!tracker.IsEmpty)
                     {
-                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(10));
+                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(2));
                         if (eventData != null)
                         {
                             foreach (var ev in eventData)
@@ -98,21 +111,27 @@ namespace EventHubCopyValidation
                                 {
                                     durations.Add(sw.ElapsedTicks - swval);
                                 }
+                                int s = Interlocked.Increment(ref received); 
+                                if ( s % 5000 == 0) {
+                                    Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                }
                             }
                         }
                         else
                         {
+                            Console.WriteLine($"Partition {partitionId} empty.");
                             break;
                         }
                     }
+                    Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");
                 }));
             }
-            await Task.WhenAll(sendTasks);
+           
             await Task.WhenAll(receiveTasks);
             Console.WriteLine();
             Assert.True(tracker.IsEmpty, $"tracker is not empty: {tracker.Count}");
 
-            Console.WriteLine(((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond);
+            Console.WriteLine($"Duration {((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond}");
             
         }
     }

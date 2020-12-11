@@ -5,7 +5,13 @@
     "namespaceName": {
       "type": "string",
       "metadata": {
-        "description": "Specifies a project name that is used to generate the Event Hub name and the Namespace name."
+        "description": "Name of the left Event Hub namespace."
+      }
+    },
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the replication function application."
       }
     },
     "location": {
@@ -25,15 +31,13 @@
     }
   },
   "variables": {
-    "eventHubNamespaceName": "[parameters('namespaceName')]",
-    "eventHubName1": "eh1",
-    "eventHubName2": "eh2"
+    "eventHub": "telemetry"
   },
   "resources": [
     {
       "type": "Microsoft.EventHub/namespaces",
       "apiVersion": "2018-01-01-preview",
-      "name": "[variables('eventHubNamespaceName')]",
+      "name": "[parameters('namespaceName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "[parameters('eventHubSku')]",
@@ -48,28 +52,26 @@
     {
       "type": "Microsoft.EventHub/namespaces/eventhubs",
       "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName1'))]",
+      "name": "[concat(parameters('namespaceName'), '/', variables('eventHub'))]",
       "location": "[parameters('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
+        "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
       ],
       "properties": {
         "messageRetentionInDays": 1,
-        "partitionCount": 16
-      }
-    },
-    {
-      "type": "Microsoft.EventHub/namespaces/eventhubs",
-      "apiVersion": "2017-04-01",
-      "name": "[concat(variables('eventHubNamespaceName'), '/', variables('eventHubName2'))]",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.EventHub/namespaces', variables('eventHubNamespaceName'))]"
-      ],
-      "properties": {
-        "messageRetentionInDays": 7,
-        "partitionCount": 16
-      }
+        "partitionCount": 4
+      },
+      "resources": [
+        {
+          "type": "consumergroups",
+          "apiVersion": "2017-04-01",
+          "name": "[concat(parameters('functionAppName'), '.', variables('eventHub'))]",
+          "dependsOn": [
+            "[resourceId('Microsoft.EventHub/namespaces/eventhubs', parameters('namespaceName'), variables('eventHub'))]"
+          ],
+          "properties": {}
+        }
+      ]
     }
   ]
 }

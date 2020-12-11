@@ -47,8 +47,8 @@ To route messages across different scopes, where the scope might be a geographic
 region or application ownership, you may create a transfer queue into which
 messages are being sent from an application, and the replication task transfers
 messages from that queue to a target queue in a namespace in a different region
-and/or belonging to a different application. Such scenarios are covered by this
-example.
+and/or belonging to a different application. The entity acting as the transfer
+queue might also be a topic subscription. 
 
 The following diagram shows an exemplary topology with a suggested convention
 for naming the various elements. Here, the replication function name reflects
@@ -109,9 +109,7 @@ az deployment group create --resource-group $USER_RESOURCE_GROUP \
                                         FunctionAppName='$USER_FUNCTIONS_APP_NAME' 
 ```
 
-The created Service Bus queues are named "jobs-transfer" and "jobs". The name of
-the consumer group created on "telemetry" is prefixed with the function app
-name, e.g. "repl-example-weu.telemetry"
+The created Service Bus queues are named "jobs-transfer" and "jobs". 
 
 ### Building, Configuring, and Deploying the Replication App
 
@@ -251,15 +249,25 @@ az servicebus queue authorization-rule create \
                           --rights listen
 ```
 
-We will then obtain the primary connection string for the rule and transfer that into the application settings, here using the bash Azure Cloud Shell:
+We will then obtain the primary connection string for the rule and transfer that
+into the application settings, here using the bash Azure Cloud Shell. Mind that
+the Service Bus trigger and output bindings don't allow for the entity name to
+be in the connection string and therefore we strip that information:
 
 ```azurecli
+
 cxnstring = $(az servicebus queue authorization-rule keys list \
                     --resource-group $USER_RESOURCE_GROUP \
                     --namespace-name $USER_SB_NAMESPACE_NAME \
                     --queue-name jobs-transfer \
                     --name replication-listen \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group $USER_RESOURCE_GROUP \
                     --settings "jobs-transfer-source-connection=$cxnstring"
@@ -287,6 +295,12 @@ cxnstring = $(az servicebus queue authorization-rule keys list \
                     --queue-name jobs \
                     --name replication-send \
                     --output=json | jq -r .primaryConnectionString)
+
+regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
+if [[ $cxnstring =~ $regex_strip_entity_name ]]; then
+   cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
+fi
+
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group example-eh \
                     --settings "jobs-target-connection=$cxnstring"

@@ -10,18 +10,19 @@ namespace EventHubToEventHubMerge
 {
     public static class Tasks
     {
-        static const string functionAppName = "merge-example";
-        static const string taskTelemetryLeft = "telemetry-westeurope-to-eastus2";
-        static const string taskTelemetryRight =  "telemetry-eastus2-to-westeurope";
+        static const string taskTelemetryLeft = "telemetry-left";
+        static const string taskTelemetryRight =  "telemetry-right";
         static const string rightEventHubName = "telemetry";
         static const string leftEventHubName = "telemetry";
         static const string rightEventHubConnection = "telemetry-eus2-connection";
         static const string leftEventHubConnection = "telemetry-weu-connection";
+        static const string leftEventHubConsumerGroup = "%telemetry-left-consumergroup%";
+        static const string rightEventHubConsumerGroup = "%telemetry-right-consumergroup%";
         
         [FunctionName(taskTelemetryLeft)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
         public static Task TelemetryLeft(
-            [EventHubTrigger(leftEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryLeft}", Connection = leftEventHubConnection)] EventData[] input,
+            [EventHubTrigger(leftEventHubName, ConsumerGroup = leftEventHubConsumerGroup, Connection = leftEventHubConnection)] EventData[] input,
             [EventHub(rightEventHubName, Connection = rightEventHubConnection)] EventHubClient outputClient,
             ILogger log)
         {
@@ -39,7 +40,7 @@ namespace EventHubToEventHubMerge
         [FunctionName(taskTelemetryRight)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
         public static Task TelemetryRight(
-            [EventHubTrigger(rightEventHubName, ConsumerGroup = $"{functionAppName}.{taskTelemetryRight}", Connection = rightEventHubConnection)] EventData[] input,
+            [EventHubTrigger(rightEventHubName, ConsumerGroup = leftEventHubConsumerGroup, Connection = rightEventHubConnection)] EventData[] input,
             [EventHub(leftEventHubName, Connection = leftEventHubConnection)] EventHubClient outputClient,
             ILogger log)
         {

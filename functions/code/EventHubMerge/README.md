@@ -286,7 +286,7 @@ az eventhubs eventhub authorization-rule create \
                           --namespace-name $USER_LEFT_NAMESPACE_NAME \
                           --eventhub-name telemetry \
                           --name replication-sendlisten \
-                          --rights send,listen
+                          --rights {send,listen}
 ```
 
 We will then [obtain the primary connection string](https://docs.microsoft.com/azure/event-hubs/event-hubs-get-connection-string) for the rule and transfer that into the application settings, here using the bash Azure Cloud Shell:
@@ -301,6 +301,14 @@ cxnstring = $(az eventhubs eventhub authorization-rule keys list \
 az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
                     --resource-group $USER_RESOURCE_GROUP \
                     --settings "telemetry-weu-connection=$cxnstring"
+```
+
+We must also configure the name of the consumer group that is created for and used by the function. 
+
+```azurecli
+az functionapp config appsettings set --name $USER_FUNCTIONS_APP_NAME \
+                    --resource-group $USER_RESOURCE_GROUP \
+                    --settings "telemetry-left-consumergroup=$USER_FUNCTIONS_APP_NAME.telemetry"
 ```
 
 #### Deploying the application
