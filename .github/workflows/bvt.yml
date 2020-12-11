@@ -9,10 +9,10 @@ on:
 jobs:
   build:
 
-    runs-on: windows-latest 
+    runs-on: ubuntu-latest 
     defaults:
       run:
-        shell: pwsh
+        shell: bash
 
     steps:
     - uses: actions/checkout@v2
@@ -21,4 +21,4 @@ jobs:
       with:
         dotnet-version: 3.1.301
     - name: Build all 
-      run: dotnet build test\BuildAll.sln
+      run: dotnet build test/build_all.sln

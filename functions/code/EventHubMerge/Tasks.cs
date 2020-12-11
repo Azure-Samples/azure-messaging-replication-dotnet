@@ -10,14 +10,14 @@ namespace EventHubToEventHubMerge
 {
     public static class Tasks
     {
-        static const string taskTelemetryLeft = "telemetry-left";
-        static const string taskTelemetryRight =  "telemetry-right";
-        static const string rightEventHubName = "telemetry";
-        static const string leftEventHubName = "telemetry";
-        static const string rightEventHubConnection = "telemetry-eus2-connection";
-        static const string leftEventHubConnection = "telemetry-weu-connection";
-        static const string leftEventHubConsumerGroup = "%telemetry-left-consumergroup%";
-        static const string rightEventHubConsumerGroup = "%telemetry-right-consumergroup%";
+        const string taskTelemetryLeft = "telemetry-left";
+        const string taskTelemetryRight =  "telemetry-right";
+        const string rightEventHubName = "telemetry";
+        const string leftEventHubName = "telemetry";
+        const string rightEventHubConnection = "telemetry-right-connection";
+        const string leftEventHubConnection = "telemetry-left-connection";
+        const string leftEventHubConsumerGroup = "%telemetry-left-consumergroup%";
+        const string rightEventHubConsumerGroup = "%telemetry-right-consumergroup%";
         
         [FunctionName(taskTelemetryLeft)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
@@ -27,9 +27,8 @@ namespace EventHubToEventHubMerge
             ILogger log)
         {
             return EventHubReplicationTasks.ConditionalForwardToEventHub(input, outputClient, log, (inputEvent) => {
-                const string replyTarget = $"{functionAppName}.{taskTelemetryLeft}";
                 if ( !inputEvent.Properties.ContainsKey("repl-target") || 
-                     !string.Equals(inputEvent.Properties["repl-target"] as string, leftEventHubName) {
+                     !string.Equals(inputEvent.Properties["repl-target"] as string, leftEventHubName)) {
                       inputEvent.Properties["repl-target"] = rightEventHubName;
                       return inputEvent;
                 }
@@ -40,13 +39,13 @@ namespace EventHubToEventHubMerge
         [FunctionName(taskTelemetryRight)]
         [ExponentialBackoffRetry(-1, "00:00:05", "00:05:00")]
         public static Task TelemetryRight(
-            [EventHubTrigger(rightEventHubName, ConsumerGroup = leftEventHubConsumerGroup, Connection = rightEventHubConnection)] EventData[] input,
+            [EventHubTrigger(rightEventHubName, ConsumerGroup = rightEventHubConsumerGroup, Connection = rightEventHubConnection)] EventData[] input,
             [EventHub(leftEventHubName, Connection = leftEventHubConnection)] EventHubClient outputClient,
             ILogger log)
         {
             return EventHubReplicationTasks.ConditionalForwardToEventHub(input, outputClient, log, (inputEvent) => {
                 if ( !inputEvent.Properties.ContainsKey("repl-target") || 
-                     !string.Equals(inputEvent.Properties["repl-target"] as string, rightEventHubName) {
+                     !string.Equals(inputEvent.Properties["repl-target"] as string, rightEventHubName)) {
                       inputEvent.Properties["repl-target"] = leftEventHubName;
                       return inputEvent;
                 }
