@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30523.141
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventHubCopyValidation", "EventHubCopyValidation.csproj", "{B6E98BA1-509D-44DC-8097-5FCCB6CE5815}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6E98BA1-509D-44DC-8097-5FCCB6CE5815}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6E98BA1-509D-44DC-8097-5FCCB6CE5815}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6E98BA1-509D-44DC-8097-5FCCB6CE5815}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6E98BA1-509D-44DC-8097-5FCCB6CE5815}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F3334859-8B72-4DCD-96D0-C8FE50E53A25}
+	EndGlobalSection
+EndGlobal

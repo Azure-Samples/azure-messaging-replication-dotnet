@@ -1,0 +1,28 @@
+{
+    "configurationSource": "config",
+    "bindings" : [
+        {
+            "direction": "in",
+            "type": "serviceBusTrigger",
+            "connection": "jobs-transfer-source-connection",
+            "queueName": "jobs-transfer",
+            "name": "input" 
+        },
+        {
+            "direction": "out",
+            "type": "eventHub",
+            "connection": "jobs-target-connection",
+            "eventHubName": "jobs",
+            "name": "output"
+        }
+    ],
+    "retry": {
+        "strategy": "exponentialBackoff",
+        "maxRetryCount": -1,
+        "minimumInterval": "00:00:05",
+        "maximumInterval": "00:05:00"
+    },
+    "disabled": false,
+    "scriptFile": "../bin/Azure.Messaging.Replication.dll",
+    "entryPoint": "Azure.Messaging.Replication.ServiceBusReplicationTasks.ForwardToEventHub"
+}

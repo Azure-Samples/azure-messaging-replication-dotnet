@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "leftNamespaceName": {
+      "value": "GEN-UNIQUE"
+    },
+    "rightNamespaceName": {
+      "value": "GEN-UNIQUE"
+    },
+    "functionAppName": {
+      "value": "GEN-UNIQUE"
+    }
+  }
+}

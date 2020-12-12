@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "EventHubCopyValidation": {
+      "commandName": "Project",
+      "commandLineArgs": ""
+    }
+  }
+}

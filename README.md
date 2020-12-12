@@ -1,57 +1,104 @@
-# Project Name
+## Azure Messaging Replication Tasks with .NET Core
 
-(short, 1-3 sentenced, description of the project)
+This project contains a set of samples that demonstrate how to create Azure
+Messaging replication tasks using the Azure Functions runtime with .NET Core.
 
-## Features
+For using these tasks with Event Hubs, first read the Event Hubs Federation guidance ([Overview](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-overview),
+[Functions](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-replicator-functions),
+[Patterns](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-patterns)).
 
-This project framework provides the following features:
+For Service Bus, read the Service Bus Federation Guidance ([Overview](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-overview),
+[Functions](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-replicator-functions),
+[Patterns](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-patterns))
 
-* Feature 1
-* Feature 2
-* ...
+### Introduction
 
-## Getting Started
+Many sophisticated solutions require the same event streams or the same content
+of queues to be made available for consumption in multiple locations and/or for
+event streams or queue contents to be collected in multiple locations and then
+consolidated into a specific locations for consumption.
 
-### Prerequisites
+Replicating event streams and contents of queues requires a scalable and
+reliable execution environment for the replication tasks that you want to
+configure and run. On Azure, the runtime environment that is best suited for
+these tasks is [Azure Functions](https://docs.microsoft.com/azure/azure-functions/functions-overview.md).
 
-(ideally very short, if any)
+Azure Functions allows replication tasks to directly integrate
+with Azure virtual networks and [service endpoints](https://docs.microsoft.com/azure/virtual-network/virtual-network-service-endpoints-overview) for
+all Azure messaging services, and it is readily integrated with [Azure Monitor](https://docs.microsoft.com/azure/azure-monitor/overview).
 
-- OS
-- Library version
-- ...
+Azure Functions has prebuilt, scalable triggers and output bindings for [Azure Event Hubs](https://docs.microsoft.com/azure/azure-functions/functions-bindings-event-hubs), [Azure IoT
+Hub](https://docs.microsoft.com/azure/azure-functions/functions-bindings-event-iot), [Azure Service Bus](https://docs.microsoft.com/azure/azure-functions/functions-bindings-service-bus.md), [Azure Event
+Grid](https://docs.microsoft.com/azure/azure-functions/functions-bindings-event-grid.md), and [Azure Queue Storage](https://docs.microsoft.com/azure/azure-functions/functions-bindings-storage-queue.md), as well as
+custom extensions for [RabbitMQ](https://github.com/azure/azure-functions-rabbitmq-extension), and [Apache Kafka](https://github.com/azure/azure-functions-kafka-extension). 
 
-### Installation
+Most triggers will dynamically adapt to the throughput needs by scaling the
+number of concurrently executing instance up and down based on documented
+metrics.
 
-(ideally very short)
+With the Azure Functions consumption plan, the prebuilt triggers can even scale
+down to zero while no messages are available for replication, which means you
+incur no costs for keeping the configuration ready to scale back up; the key
+downside of using the consumption plan is that the latency for replication tasks
+"waking up" from this state is significantly higher than with the hosting plans
+where the infrastructure is kept running.  
 
-- npm install [package name]
-- mvn install
-- ...
+### How to use this repository
 
-### Quickstart
-(Add steps to get up and running quickly)
+You can use this repository either to configure and deploy replication tasks
+without having to write any code, at all, or you can use it as a foundation for
+your own replication tasks.
 
-1. git clone [repository clone url]
-2. cd [respository name]
-3. ...
+In either case, you will need the following tools:
+* [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local)
+* [.NET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+* [Git client](https://git-scm.com/downloads)
+
+Most documented script snippets are written for the Bash shell, but can be easily adapted to PowerShell.
+
+Please download the repository contents or clone this repository from a command line window with:
+
+```powershell
+git clone https://github.com/Azure-Samples/azure-messaging-replication-dotnet
+```
+
+The instructions in the [functions/config](functions/config) folder and
+subfolders explain how to configure replication tasks without having to write
+any code yourself. The provided scripts use the aforementioned tools for
+configuring the replication tasks.
+
+### Contents
+
+The following folders are part of this project:
+
+* **[functions/code](functions/code)** - .NET Core Azure Functions projects as starting points for your custom replication tasks that require modification of events or messages as they are being moved:
+   * **[EventHubCopy](functions/code/EventHubCopy)** - Function for copying data between two Event Hubs
+   * **[EventHubMerge](functions/code/EventHubMerge)** - Function for continuously merging two Event Hubs
+   * **[EventHubProjectionToCosmosDB](functions/code/EventHubProjectionToCosmosDB)** - Function for projecting events into a key/value store ("compaction")
+   * **[ServiceBusCopy](functions/code/ServiceBusCopy)** - Function for copying data between two Service Bus Queues
+   * **[ServiceActivePassive](functions/code/ServiceBusActivePassive)** - Function backing up messages in a standby topic or queue
+   * **[ServiceBusAllActive](functions/code/ServiceBusAllActive)** - Function for maintaining mirrored topics acting as queues
+* **[functions/config](functions/config)** - Configuration-only projects, which use the standard replication task library:
+   * **[EventHubCopy](functions/config/EventHubCopy)** - Function for copying data between two Event Hubs
+   * **[EventHubCopyToServiceBus](functions/config/EventHubCopyToServiceBus)** - Function for copying data between two Event Hubs
+   * **[ServiceBusCopy](functions/config/ServiceBusCopy)** - Function for copying data between two Service Bus Queues
+   * **[ServiceBusCopyToEventHub](functions/config/ServiceBusCopyToEventHub)** - Function for copying data between a Service Bus Queue to an Event Hub
+* **[src](src)** - .NET Core libraries implementing replication tasks.
+  * **[src/Azure.Messaging.Replication](src/Azure.Messaging.Replication)** - Standard replication tasks
+* **[templates](templates)** - Azure Resource Manager templates to create properly configured Function app environments 
+* **[test](test)** - Test projects and validation scripts
 
 
-## Demo
+## Contributing
 
-A demo app is included to show how to use the project.
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
 
-To run the demo, follow these steps:
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
 
-(Add steps to start up the demo)
-
-1.
-2.
-3.
-
-## Resources
-
-(Any additional resources or related projects)
-
-- Link to supporting information
-- Link to similar sample
-- ...
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
