@@ -1,7 +1,14 @@
 ## Azure Messaging Replication Tasks with .NET Core
 
 This project contains a set of samples that demonstrate how to create Azure
-Messaging replication tasks using the Azure Functions runtime with .NET Core.
+Messaging replication tasks using the Azure Functions runtime with .NET Core as
+the exemplary implementation language. The guidance equivalently applies to all
+other Azure SDKs.
+
+Replication tasks built following this guidance, using the supplied code or your
+own code, build on generally available capabilities of Azure Functions and are
+eligible for product support equivalent to any other Azure Function that
+you build, deploy, and run. 
 
 For using these tasks with Event Hubs, first read the Event Hubs Federation guidance ([Overview](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-overview),
 [Functions](https://docs.microsoft.com/azure/event-hubs/event-hubs-federation-replicator-functions),
@@ -10,6 +17,11 @@ For using these tasks with Event Hubs, first read the Event Hubs Federation guid
 For Service Bus, read the Service Bus Federation Guidance ([Overview](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-overview),
 [Functions](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-replicator-functions),
 [Patterns](https://docs.microsoft.com/azure/service-bus-messaging/service-bus-federation-patterns))
+
+For stateful replication applications that need to consider relationships
+between events, create composite events, enrich events or reduce events, create
+data aggregations, and transform event payloads, [Azure Stream
+Analytics](../stream-analytics/stream-analytics-introduction.md) is the best implementation option.
 
 ### Introduction
 
