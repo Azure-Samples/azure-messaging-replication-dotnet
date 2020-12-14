@@ -35,7 +35,7 @@ quit() {
 }
 
 # go into project dir
-pushd ../functions/config/EventHubCopy > /dev/null
+pushd ../functions/code/EventHubMerge > /dev/null
 
 if [ $CREATE_RESOURCE_GROUP ]; then
     echo "Creating resource group ..."
@@ -200,12 +200,19 @@ dotnet bin/Debug/netcoreapp3.1/EventHubCopyValidation.dll \
    -t "$cxnstring_left" -s "$cxnstring_right" \
    -et telemetry -es telemetry -cg '\$Default' >> $LOGFILE 2>&1
 
+retval=$?
+if [ $retval -ne 0 ]; then
+    exit
+    quit $retval
+fi
+
 dotnet bin/Debug/netcoreapp3.1/EventHubCopyValidation.dll \
    -t "$cxnstring_right" -s "$cxnstring_left" \
    -et telemetry -es telemetry -cg '\$Default' >> $LOGFILE 2>&1
 
 retval=$?
 if [ $retval -ne 0 ]; then
+    exit
     quit $retval
 fi
 echo "Validation done"
