@@ -16,40 +16,40 @@ namespace ServiceBusCopyValidation
 
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
-            //// before we localize, make sure we have all the error
-            //// messages in en-us
-            //CultureInfo.CurrentUICulture =
-            //    CultureInfo.DefaultThreadCurrentUICulture =
-            //        CultureInfo.GetCultureInfoByIetfLanguageTag("en-us");
+            // before we localize, make sure we have all the error
+            // messages in en-us
+            CultureInfo.CurrentUICulture =
+                CultureInfo.DefaultThreadCurrentUICulture =
+                    CultureInfo.GetCultureInfoByIetfLanguageTag("en-us");
 
-            //try
-            //{ 
-            //    return CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
-            //}
-            //catch(CommandParsingException exception)
-            //{
-            //    Console.WriteLine(exception.Message);
-            //    return 1;
-            //}
+            try
+            {
+                return CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
+            }
+            catch (CommandParsingException exception)
+            {
+                Console.WriteLine(exception.Message);
+                return 1;
+            }
         }
 
-        //static async Task<int> Run(CommandLineSettings settings, string[] args)
-        //{
-        //    try
-        //    {
-        //        var plt = new ServiceBusCopyTest(settings.TargetNamespaceConnectionString,
-        //            settings.SourceNamespaceConnectionString, settings.TargetQueue, settings.SourceQueue);
-        //        await plt.RunTest();
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        Console.WriteLine(e.ToString());
-        //        return 1;
-        //    }
-        //    return 0;
-        //}
+        static async Task<int> Run(CommandLineSettings settings, string[] args)
+        {
+            try
+            {
+                var plt = new ServiceBusCopyTest(settings.TargetNamespaceConnectionString,
+                    settings.SourceNamespaceConnectionString, settings.TargetQueue, settings.SourceQueue);
+                await plt.RunTest();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                return 1;
+            }
+            return 0;
+        }
     }
 
 
