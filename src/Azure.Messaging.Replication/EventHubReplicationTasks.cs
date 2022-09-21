@@ -6,20 +6,21 @@ namespace Azure.Messaging.Replication
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Microsoft.Azure.EventHubs;
-    using Microsoft.Azure.ServiceBus;
+    using Azure.Messaging.EventHubs;
+    using Azure.Messaging.EventHubs.Producer;
+    using Azure.Messaging.ServiceBus;
     using Microsoft.Azure.WebJobs;
     using Microsoft.Extensions.Logging;
 
     public class EventHubReplicationTasks
     {
-        public static Task ForwardToEventHub(EventData[] input, EventHubClient output,
+        public static Task ForwardToEventHub(EventData[] input, EventHubProducerClient output,
             ILogger log)
         {
             return ConditionalForwardToEventHub(input, output, log);
         }
 
-        public static Task ConditionalForwardToEventHub(EventData[] input, EventHubClient output,
+        public static Task ConditionalForwardToEventHub(EventData[] input, EventHubProducerClient output,
             ILogger log, Func<EventData, EventData> factory = null)
         {
             var tasks = new List<Task>();
@@ -32,30 +33,36 @@ namespace Azure.Messaging.Replication
                 {
                     continue;
                 }
+                var enqueuedTime = eventData.EnqueuedTime.ToString("u");
+                var offset = eventData.Offset;
+                var sequenceNumber = eventData.SequenceNumber.ToString();
+
                 eventData.Properties[Constants.ReplEnqueuedTimePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
                         ? eventData.Properties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.EnqueuedTimeUtc.ToString("u");
+                    enqueuedTime;
+
                 eventData.Properties[Constants.ReplOffsetPropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplOffsetPropertyName)
                         ? eventData.Properties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.Offset;
+                    offset;
+
                 eventData.Properties[Constants.ReplSequencePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplSequencePropertyName)
                         ? eventData.Properties[Constants.ReplSequencePropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.SequenceNumber.ToString();
+                    sequenceNumber;
 
-                if (eventData.SystemProperties.PartitionKey != null)
+                if (eventData.PartitionKey != null)
                 {
-                    if (!partitionBatches.ContainsKey(eventData.SystemProperties.PartitionKey))
+                    if (!partitionBatches.ContainsKey(eventData.PartitionKey))
                     {
-                        partitionBatches[eventData.SystemProperties.PartitionKey] = new List<EventData>();
+                        partitionBatches[eventData.PartitionKey] = new List<EventData>();
                     }
 
-                    partitionBatches[eventData.SystemProperties.PartitionKey].Add(eventData);
+                    partitionBatches[eventData.PartitionKey].Add(eventData);
                 }
                 else
                 {
@@ -72,25 +79,30 @@ namespace Azure.Messaging.Replication
             {
                 foreach (var batch in partitionBatches)
                 {
-                    tasks.Add(output.SendAsync(batch.Value, batch.Key));
+                    var options = new SendEventOptions
+                    {
+                        PartitionKey = batch.Key
+                    };
+
+                    tasks.Add(output.SendAsync(batch.Value, options));
                 }
             }
 
             return Task.WhenAll(tasks);
         }
 
-        public static Task ForwardToServiceBus(EventData[] input, IAsyncCollector<Message> output,
+        public static Task ForwardToServiceBus(EventData[] input, IAsyncCollector<ServiceBusMessage> output,
             ILogger log)
         {
             return ConditionalForwardToServiceBus(input, output, log);
         }
 
-        public static async Task ConditionalForwardToServiceBus(EventData[] input, IAsyncCollector<Message> output,
-            ILogger log, Func<EventData, Message> factory = null)
+        public static async Task ConditionalForwardToServiceBus(EventData[] input, IAsyncCollector<ServiceBusMessage> output,
+            ILogger log, Func<EventData, ServiceBusMessage> factory = null)
         {
             foreach (EventData eventData in input)
             {
-                Message message;
+                ServiceBusMessage message;
 
                 if (factory != null)
                 {
@@ -102,39 +114,41 @@ namespace Azure.Messaging.Replication
                 }
                 else
                 {
-                    message = new Message(eventData.Body.ToArray())
+                    message = new ServiceBusMessage(eventData.Body.ToArray())
                     {
-                        ContentType = eventData.SystemProperties["content-type"] as string,
+                        ContentType = eventData.ContentType as string,
                         To = eventData.SystemProperties["to"] as string,
-                        CorrelationId = eventData.SystemProperties["correlation-id"] as string,
-                        Label = eventData.SystemProperties["subject"] as string,
+                        CorrelationId = eventData.CorrelationId as string,
+                        Subject = eventData.SystemProperties["subject"] as string,
                         ReplyTo = eventData.SystemProperties["reply-to"] as string,
                         ReplyToSessionId = eventData.SystemProperties["reply-to-group-name"] as string,
-                        MessageId = eventData.SystemProperties["message-id"] as string ?? eventData.SystemProperties.Offset,
-                        PartitionKey = eventData.SystemProperties.PartitionKey,
-                        SessionId = eventData.SystemProperties.PartitionKey
+                        MessageId = eventData.MessageId as string ?? eventData.Offset.ToString(),
+                        PartitionKey = eventData.PartitionKey,
+                        SessionId = eventData.PartitionKey
                     };
                     foreach (var property in eventData.Properties)
                     {
-                        message.UserProperties.Add(property);
+                        message.ApplicationProperties.Add(property);
                     }
                 }
 
-                message.UserProperties[Constants.ReplEnqueuedTimePropertyName] =
+                message.ApplicationProperties[Constants.ReplEnqueuedTimePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
                         ? eventData.Properties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.EnqueuedTimeUtc.ToString("u");
-                message.UserProperties[Constants.ReplOffsetPropertyName] =
+                    eventData.EnqueuedTime.ToString("u");
+
+                message.ApplicationProperties[Constants.ReplOffsetPropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplOffsetPropertyName)
                         ? eventData.Properties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.Offset;
-                message.UserProperties[Constants.ReplSequencePropertyName] =
+                    eventData.Offset;
+
+                message.ApplicationProperties[Constants.ReplSequencePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplSequencePropertyName)
                         ? eventData.Properties[Constants.ReplSequencePropertyName] + ";"
                         : string.Empty) +
-                    eventData.SystemProperties.SequenceNumber.ToString();
+                    eventData.SequenceNumber.ToString();
 
                 await output.AddAsync(message);
             }

@@ -9,8 +9,11 @@ namespace EventHubCopyValidation
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.EventHubs;
+    using Azure.Messaging.EventHubs;
+    using Azure.Messaging.EventHubs.Producer;
+    using Azure.Messaging.EventHubs.Primitives;
     using Xunit;
+    using Azure.Messaging.EventHubs.Consumer;
 
     class EventHubOrderTest
     {
@@ -20,21 +23,17 @@ namespace EventHubCopyValidation
 
         readonly string targetEventHub;
 
-        readonly string sourceEventHub;
-
         readonly string sourceConsumerGroup;
 
         public EventHubOrderTest(
             string targetNamespaceConnectionString,
             string sourceNamespaceConnectionString,
             string targetEventHub,
-            string sourceEventHub,
             string sourceConsumerGroup)
         {
             this.targetNamespaceConnectionString = targetNamespaceConnectionString;
             this.sourceNamespaceConnectionString = sourceNamespaceConnectionString;
             this.targetEventHub = targetEventHub;
-            this.sourceEventHub = sourceEventHub;
             this.sourceConsumerGroup = sourceConsumerGroup;
         }
 
@@ -42,21 +41,14 @@ namespace EventHubCopyValidation
         public async Task RunTest()
         {
             Console.WriteLine("EventHubOrderTest");
-            string pk = Guid.NewGuid().ToString();
-            var senderCxn = new EventHubsConnectionStringBuilder(targetNamespaceConnectionString)
-            {
-                EntityPath = targetEventHub
-            };
-            var sendSideClient = EventHubClient.CreateFromConnectionString(senderCxn.ToString());
-            var receiverCxn = new EventHubsConnectionStringBuilder(sourceNamespaceConnectionString)
-            {
-                EntityPath = sourceEventHub
-            };
-            var receiveSideClient = EventHubClient.CreateFromConnectionString(receiverCxn.ToString());
+            string partitionKey = Guid.NewGuid().ToString();
 
-            var senderInfo = await sendSideClient.GetRuntimeInformationAsync();
-            var receiverInfo = await receiveSideClient.GetRuntimeInformationAsync();
-            Assert.Equal(senderInfo.PartitionCount, receiverInfo.PartitionCount);
+            var targetproducer = new EventHubProducerClient(targetNamespaceConnectionString, targetEventHub);
+            var sourceconsumer = new EventHubConsumerClient(this.sourceConsumerGroup, this.sourceNamespaceConnectionString);
+
+            var senderPartitions = await targetproducer.GetPartitionIdsAsync();
+            var receiverPartitions = await sourceconsumer.GetPartitionIdsAsync();
+            Assert.Equal(senderPartitions.Count(), receiverPartitions.Count());
 
             var start = DateTime.UtcNow;
 
@@ -78,9 +70,16 @@ namespace EventHubCopyValidation
 
                 tracker.Add(new Tuple<string, long>(msgid, sw.ElapsedTicks));
                 var eventData = new EventData(data);
-                eventData.Properties["message-id"] = msgid;
+                eventData.MessageId = msgid;
+
                 // we need to send those all one-by-one to preserve order during sends
-                await sendSideClient.SendAsync(eventData, pk).ContinueWith(t =>
+
+                var options = new SendEventOptions
+                {
+                    PartitionKey = partitionKey
+                };
+
+                await targetproducer.SendAsync(new List<EventData>() { eventData }, options).ContinueWith(t =>
                 {
                     int s = Interlocked.Increment(ref sent);
                     if (s % 1000 == 0)
@@ -90,47 +89,34 @@ namespace EventHubCopyValidation
                 });
             }
 
-
-
             List<Task> receiveTasks = new List<Task>();
 
             ConcurrentBag<long> durations = new ConcurrentBag<long>();
             Console.Write("receiving: ");
-            foreach (var partitionId in receiverInfo.PartitionIds)
+            foreach (var partitionId in receiverPartitions)
             {
                 receiveTasks.Add(Task.Run(async () =>
                 {
                     int received = 0;
-                    var receiver = receiveSideClient.CreateReceiver(this.sourceConsumerGroup, partitionId,
-                        EventPosition.FromEnqueuedTime(start));
+                    var startPosition = EventPosition.FromEnqueuedTime(start);
+                    var options = new ReadEventOptions { MaximumWaitTime = TimeSpan.FromSeconds(30) };
+
                     Console.WriteLine($"Partition {partitionId} starting ");
                     while (tracker.Count > 0)
                     {
-
-                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(30));
-                        if (eventData != null)
+                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionKey, startPosition, options))
                         {
-                            foreach (var ev in eventData)
+                            var eventData = partitionEvent.Data;
+                            string msgid = eventData.MessageId;
+                            Assert.Equal(tracker[0].Item1, msgid);
+                            durations.Add(sw.ElapsedTicks - tracker[0].Item2);
+                            tracker.RemoveAt(0);
+
+                            int s = Interlocked.Increment(ref received);
+                            if (s % 5000 == 0)
                             {
-                                if (ev.SystemProperties.PartitionKey != pk)
-                                    continue;
-
-                                string msgid = ev.Properties["message-id"] as string;
-                                Assert.Equal(tracker[0].Item1, msgid);
-                                durations.Add(sw.ElapsedTicks - tracker[0].Item2);
-                                tracker.RemoveAt(0);
-
-                                int s = Interlocked.Increment(ref received);
-                                if (s % 5000 == 0)
-                                {
-                                    Console.WriteLine($"Partition {partitionId} received {s} messages ...");
-                                }
+                                Console.WriteLine($"Partition {partitionId} received {s} messages ...");
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Partition {partitionId} empty.");
-                            break;
                         }
                     }
                     Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");

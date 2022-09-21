@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Azure.EventHubs;
+using Azure.Messaging.EventHubs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -19,11 +19,11 @@ namespace EventHubProjectionToCosmosDb
         {
             foreach (var ev in input)
             {
-                if (!string.IsNullOrEmpty(ev.SystemProperties.PartitionKey))
+                if (!string.IsNullOrEmpty(ev.PartitionKey))
                 {
                     var record = new
                     {
-                        id = ev.SystemProperties.PartitionKey,
+                        id = ev.PartitionKey,
                         data = ev.Body.ToArray(),
                         properties = ev.Properties
                     };
@@ -41,11 +41,11 @@ namespace EventHubProjectionToCosmosDb
         {
             foreach (var ev in input)
             {
-                if (!string.IsNullOrEmpty(ev.SystemProperties.PartitionKey))
+                if (!string.IsNullOrEmpty(ev.PartitionKey))
                 {
                     var record = new
                     {
-                        id = ev.SystemProperties.PartitionKey,
+                        id = ev.PartitionKey,
                         data = JsonDocument.Parse(ev.Body),
                         properties = ev.Properties
                     };

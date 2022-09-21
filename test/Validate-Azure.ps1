@@ -1,8 +1,8 @@
-# This script is meand to be run as the validation stage of the 
+# This script is meant to be run as the validation stage of the 
 # build process and under an existing Azure PowerShell context.
 # This may be provided by the AzurePowerShell task in Azure Pipelines
 
-exit  0
+#exit  0
 
 $ErrorActionPreference = "Stop"
 
@@ -51,28 +51,28 @@ function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
+    pushd "$PSScriptRoot\EventHubCopyValidation" > $null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubA -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubB -UseSAS $true)" -et eventHubA -es eventHubB -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd > /dev/null
+    popd > $null
     return $result
 }
 
 function Test-EventHubsCodeApp([String] $Location, [String] $RGName) {
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubCopy\Configure-Function.ps1" -TaskName Eh1toEh2 -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eh1 -TargetNamespaceName $RGname -TargetEventHubName eh2
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Configure-Function.ps1" -TaskName Eh1toEh2 -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eh1 -TargetNamespaceName $RGname -TargetEventHubName eh2
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
+    pushd "$PSScriptRoot\EventHubCopyValidation" > $null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd > /dev/null
+    popd > $null
 
     return $result
 }
@@ -89,7 +89,7 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
+    pushd "$PSScriptRoot\EventHubCopyValidation" > $null
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     if ( $result -ne 0 )
@@ -98,7 +98,7 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
     }
     & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -et eh2 -es eh1 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd > /dev/null
+    popd > $null
 
     return $result
 }
@@ -119,10 +119,10 @@ function Test-ServiceBusConfigApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
+    pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
     & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd > /dev/null
+    popd > $null
     return $result
 }
 
@@ -137,22 +137,22 @@ function Test-ServiceBusCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
-    pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
+    pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
     & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
-    popd > /dev/null
+    popd > $null
 
     return $result
 }
 
 Write-Host "Building Test projects"
-pushd "$PSScriptRoot\EventHubCopyValidation" > /dev/null
+pushd "$PSScriptRoot\EventHubCopyValidation" > $null
 dotnet build "EventHubCopyValidation.csproj" -c Debug 2>&1 > build.log
-popd > /dev/null
+popd > $null
 
-pushd "$PSScriptRoot\ServiceBusCopyValidation" > /dev/null
+pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
 dotnet build "ServiceBusCopyValidation.csproj" -c Debug 2>&1 > build.log
-popd > /dev/null
+popd > $null
 
 Write-Host "Event Hub Scenario Code/Consumption"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
