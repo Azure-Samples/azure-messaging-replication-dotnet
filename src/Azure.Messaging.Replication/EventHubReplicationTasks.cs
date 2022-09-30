@@ -33,27 +33,21 @@ namespace Azure.Messaging.Replication
                 {
                     continue;
                 }
-                var enqueuedTime = eventData.EnqueuedTime.ToString("u");
-                var offset = eventData.Offset;
-                var sequenceNumber = eventData.SequenceNumber.ToString();
-
                 eventData.Properties[Constants.ReplEnqueuedTimePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
                         ? eventData.Properties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
-                    enqueuedTime;
-
+                    eventData.EnqueuedTime.ToString("u");
                 eventData.Properties[Constants.ReplOffsetPropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplOffsetPropertyName)
                         ? eventData.Properties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
-                    offset;
-
+                    eventData.Offset;
                 eventData.Properties[Constants.ReplSequencePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplSequencePropertyName)
                         ? eventData.Properties[Constants.ReplSequencePropertyName] + ";"
                         : string.Empty) +
-                    sequenceNumber;
+                    eventData.SequenceNumber.ToString();
 
                 if (eventData.PartitionKey != null)
                 {
@@ -83,7 +77,6 @@ namespace Azure.Messaging.Replication
                     {
                         PartitionKey = batch.Key
                     };
-
                     tasks.Add(output.SendAsync(batch.Value, options));
                 }
             }
@@ -116,13 +109,13 @@ namespace Azure.Messaging.Replication
                 {
                     message = new ServiceBusMessage(eventData.Body.ToArray())
                     {
-                        ContentType = eventData.ContentType as string,
+                        ContentType = eventData.SystemProperties["content-type"] as string,
                         To = eventData.SystemProperties["to"] as string,
-                        CorrelationId = eventData.CorrelationId as string,
-                        Subject = eventData.SystemProperties["subject"] as string,
+                        CorrelationId = eventData.SystemProperties["correlation-id"] as string,
+                        //Label = eventData.SystemProperties["subject"] as string,
                         ReplyTo = eventData.SystemProperties["reply-to"] as string,
                         ReplyToSessionId = eventData.SystemProperties["reply-to-group-name"] as string,
-                        MessageId = eventData.MessageId as string ?? eventData.Offset.ToString(),
+                        MessageId = eventData.SystemProperties["message-id"] as string ?? eventData.Offset.ToString(),
                         PartitionKey = eventData.PartitionKey,
                         SessionId = eventData.PartitionKey
                     };
@@ -137,13 +130,11 @@ namespace Azure.Messaging.Replication
                         ? eventData.Properties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
                     eventData.EnqueuedTime.ToString("u");
-
                 message.ApplicationProperties[Constants.ReplOffsetPropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplOffsetPropertyName)
                         ? eventData.Properties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
                     eventData.Offset;
-
                 message.ApplicationProperties[Constants.ReplSequencePropertyName] =
                     (eventData.Properties.ContainsKey(Constants.ReplSequencePropertyName)
                         ? eventData.Properties[Constants.ReplSequencePropertyName] + ";"

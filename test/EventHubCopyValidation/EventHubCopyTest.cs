@@ -39,7 +39,7 @@ namespace EventHubCopyValidation
         public async Task RunTest()
         {
             Console.WriteLine("EventHubCopyTest");
-            var targetproducer = new EventHubProducerClient(targetNamespaceConnectionString, targetEventHub);
+            var targetproducer = new EventHubProducerClient(targetNamespaceConnectionString);
             var sourceconsumer = new EventHubConsumerClient(this.sourceConsumerGroup, this.sourceNamespaceConnectionString);
 
             var senderPartitions = await targetproducer.GetPartitionIdsAsync();
@@ -52,7 +52,7 @@ namespace EventHubCopyValidation
             sw.Start();
             var tracker = new ConcurrentDictionary<string, long>();
 
-            int messageCount = 50000;
+            int messageCount = 5000;
             int sizeInBytes = 128;
             var data = new byte[sizeInBytes];
             Array.Fill<byte>(data, 0xff);
@@ -95,24 +95,45 @@ namespace EventHubCopyValidation
                     int received = 0;
                     var startPosition = EventPosition.FromEnqueuedTime(start);
                     var options = new ReadEventOptions { MaximumWaitTime = TimeSpan.FromSeconds(30) };
+                    using var cancellationTokenSource = new CancellationTokenSource();
+                    var cancellationToken = cancellationTokenSource.Token;
 
                     Console.WriteLine($"Partition {partitionId} starting ");
-                    while (!tracker.IsEmpty)
+                    try
                     {
-                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionId, startPosition, options))
+                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionId, startPosition, options, cancellationToken))
                         {
-                            var eventData = partitionEvent.Data;
-                            string msgid = eventData.MessageId as string;
-                            if (tracker.TryRemove(msgid, out var swval))
+                            if (!tracker.IsEmpty)
                             {
-                                durations.Add(sw.ElapsedTicks - swval);
+                                var eventData = partitionEvent.Data;
+                                if (eventData == null)
+                                {
+                                    Console.WriteLine($"No events were received during the {options.MaximumWaitTime} window.");
+                                    break;
+                                }
+                                else
+                                {
+                                    string msgid = eventData.MessageId;
+                                    if (tracker.TryRemove(msgid, out var swval))
+                                    {
+                                        durations.Add(sw.ElapsedTicks - swval);
+                                    }
+                                    int s = Interlocked.Increment(ref received);
+                                    if (s % 5000 == 0)
+                                    {
+                                        Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                    }
+                                }
                             }
-                            int s = Interlocked.Increment(ref received);
-                            if (s % 5000 == 0)
+                            else
                             {
-                                Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                cancellationTokenSource.Cancel();
                             }
                         }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Test run is ending
                     }
                     Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");
                 }));

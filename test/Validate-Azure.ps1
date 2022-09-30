@@ -4,6 +4,8 @@
 
 #exit  0
 
+"========== TEST RUN AT : $(Get-Date) ==========" > "$PSScriptRoot\run.log"
+
 $ErrorActionPreference = "Stop"
 
 function Get-EventHubConnectionString  ([String] $NamespaceName, [String] $EventHubName, [bool] $UseSAS = $true) {
@@ -39,16 +41,16 @@ function Get-ServiceBusConnectionString  ([String] $NamespaceName, [String] $Que
 function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
     
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
     
     Write-Host " - Build Project"
-    & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Build-FunctionApp.ps1" 
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Build-FunctionApp.ps1" 
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Configure-Function.ps1" -TaskName EventHubAToEventHubB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eventHubA -TargetNamespaceName $RGname -TargetEventHubName eventHubB
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Configure-Function.ps1" -TaskName EventHubAToEventHubB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eventHubA -TargetNamespaceName $RGname -TargetEventHubName eventHubB
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\config\EventHubToEventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\EventHubCopyValidation" > $null
@@ -58,19 +60,19 @@ function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
     return $result
 }
 
-function Test-EventHubsCodeApp([String] $Location, [String] $RGName) {
+function Test-EventHubsCodeApp([String] $Location, [String] $RGName, [String] $FAName) {
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\code\EventHubCopy\Configure-Function.ps1" -TaskName Eh1toEh2 -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eh1 -TargetNamespaceName $RGname -TargetEventHubName eh2
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Configure-Function.ps1" -FunctionAppName $FAName -ResourceGroupName $RGName -SourceNamespacename "eventhubcopy-left" -SourceEventHubName "telemetry" -TargetNamespaceName "eventhubcopy-right" -TargetEventHubName "telemetry"
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $FAName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\EventHubCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName "eventhubcopy-left" -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName "eventhubcopy-right" -EventHubName "telemetry" -UseSAS $true)" -et telemetry -es telemetry -cg ($FAName+".telemetry") 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
 
@@ -82,21 +84,21 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
     & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -TaskName Eh1toEh2 -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eh1 -TargetNamespaceName $RGname -TargetEventHubName eh2
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -TaskName Eh2toEh1 -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eh2 -TargetNamespaceName $RGname -TargetEventHubName eh1
+    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName "telemetry" -TargetNamespaceName $RGname -TargetEventHubName "telemetry"
+    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName "telemetry" -TargetNamespaceName $RGname -TargetEventHubName "telemetry"
     
     Write-Host " - Deploy Function"
     & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\EventHubCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -et eh1 -es eh2 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     if ( $result -ne 0 )
     {
         return $result
     }
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh2" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "eh1" -UseSAS $true)" -et eh2 -es eh1 -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
 
@@ -155,17 +157,20 @@ dotnet build "ServiceBusCopyValidation.csproj" -c Debug 2>&1 > build.log
 popd > $null
 
 Write-Host "Event Hub Scenario Code/Consumption"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
+$RGName = "mjrmsgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName 
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
     exit $result
 }
+
+exit 0
 
 Write-Host "Event Hub Scenario Code/Premium"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"

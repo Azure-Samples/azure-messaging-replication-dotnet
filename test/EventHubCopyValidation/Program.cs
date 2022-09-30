@@ -67,6 +67,8 @@ namespace EventHubCopyValidation
         public string SourceNamespaceConnectionString { get; set; }
         [Option(CommandOptionType.SingleValue, ShortName = "et", Description = "Target Event Hub")]
         public string TargetEventHub { get; set; }
+        [Option(CommandOptionType.SingleValue, ShortName = "es", Description = "Source Event Hub")]
+        public string SourceEventHub { get; set; }
         [Option(CommandOptionType.SingleValue, ShortName = "cg", Description = "Source Consumer Group")]
         public string SourceConsumerGroup { get; set; }
 

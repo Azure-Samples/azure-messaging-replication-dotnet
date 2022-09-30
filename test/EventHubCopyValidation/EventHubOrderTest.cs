@@ -100,24 +100,41 @@ namespace EventHubCopyValidation
                     int received = 0;
                     var startPosition = EventPosition.FromEnqueuedTime(start);
                     var options = new ReadEventOptions { MaximumWaitTime = TimeSpan.FromSeconds(30) };
+                    using var cancellationTokenSource = new CancellationTokenSource();
 
                     Console.WriteLine($"Partition {partitionId} starting ");
-                    while (tracker.Count > 0)
+                    try
                     {
-                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionKey, startPosition, options))
+                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionId, startPosition, options, cancellationTokenSource.Token))
                         {
-                            var eventData = partitionEvent.Data;
-                            string msgid = eventData.MessageId;
-                            Assert.Equal(tracker[0].Item1, msgid);
-                            durations.Add(sw.ElapsedTicks - tracker[0].Item2);
-                            tracker.RemoveAt(0);
-
-                            int s = Interlocked.Increment(ref received);
-                            if (s % 5000 == 0)
+                            if (tracker.Count > 0)
                             {
-                                Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                var eventData = partitionEvent.Data;
+                                if (eventData == null)
+                                {
+                                    Console.WriteLine($"No events were received during the {options.MaximumWaitTime} window.");
+                                    break;
+                                }
+                                string msgid = eventData.MessageId;
+                                Assert.Equal(tracker[0].Item1, msgid);
+                                durations.Add(sw.ElapsedTicks - tracker[0].Item2);
+                                tracker.RemoveAt(0);
+
+                                int s = Interlocked.Increment(ref received);
+                                if (s % 5000 == 0)
+                                {
+                                    Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                }
+                            }
+                            else
+                            {
+                                cancellationTokenSource.Cancel();
                             }
                         }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Run is ending
                     }
                     Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");
                 }));

@@ -1,5 +1,5 @@
 # Build the Functions Code
-pushd $PSScriptRoot > /dev/null
+pushd $PSScriptRoot > $null
 
 if ( $(Get-ChildItem -Directory bin -ErrorAction SilentlyContinue) ) {
     Remove-Item -Recurse bin
@@ -12,4 +12,4 @@ func extensions sync --csx 2>&1 >> build.log
 func extensions install 2>&1 >> build.log
 Remove-Item extensions.csproj 2>&1 >> build.log
 
-popd > /dev/null
+popd > $null

@@ -2,14 +2,5 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "leftNamespaceName": {
-      "value": "[concat('eventhubcopy-left-', uniqueString(resourceGroup().id))]"
-    },
-    "rightNamespaceName": {
-      "value": "[concat('eventhubcopy-right-', uniqueString(resourceGroup().id))]"
-    },
-    "functionsAppName": {
-      "value": "[concat('fnapp', uniqueString(resourceGroup().id))]"
-    }
   }
 }

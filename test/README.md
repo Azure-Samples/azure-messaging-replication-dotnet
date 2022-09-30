@@ -13,4 +13,4 @@ The script calls the documented helper scripts and to create and configure:
 * Configuration for those entities
 * Deployment of the functions application
 
-Once a function is completely set up and configured the end-to-end test project included herein is run to ensure to run events/messages through the replication setup to verify that no messagesr are lost and that m,essages that are expected to be received in a particular order (sessions and event streams with partition keys) are indeed received in that order. 
+Once a function is completely set up and configured the end-to-end test project included herein is run to ensure to run events/messages through the replication setup to verify that no messages are lost and that messages that are expected to be received in a particular order (sessions and event streams with partition keys) are indeed received in that order. 
