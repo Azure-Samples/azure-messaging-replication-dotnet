@@ -170,14 +170,13 @@ if ( $result -ne 0) {
     exit $result
 }
 
-exit 0
-
 Write-Host "Event Hub Scenario Code/Premium"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
@@ -188,16 +187,20 @@ if ( $result -ne 0) {
 
 Write-Host "Event Hub Merge Scenario Code/Consumption"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
+
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
     exit $result
 }
+
+exit 0
 
 Write-Host "Event Hub Merge Scenario Code/Premium"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
