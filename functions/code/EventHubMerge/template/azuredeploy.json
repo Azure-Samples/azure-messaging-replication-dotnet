@@ -4,12 +4,14 @@
   "parameters": {
     "leftNamespaceName": {
       "type": "string",
+      "defaultValue": "eventhubmerge-left",
       "metadata": {
         "description": "Name of the left Event Hub namespace."
       }
     },
     "rightNamespaceName": {
       "type": "string",
+      "defaultValue": "eventhubmerge-right",
       "metadata": {
         "description": "Name of the right Event Hub namespace."
       }

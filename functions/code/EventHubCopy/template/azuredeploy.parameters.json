@@ -2,5 +2,26 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+      "leftEventHub": {
+          "value": "telemetry"
+      },
+      "leftNamespaceName": {
+          "value": "eventhubcopy-left"
+      },
+      "rightNamespaceName": {
+          "value": "eventhubcopy-right"
+      },
+      "rightEventHub": {
+          "value": "telemetry"
+      },
+      "location": {
+          "value": ""
+      },
+      "eventHubSku": {
+          "value": "Standard"
+      },
+      "functionsAppName": {
+          "value": "fnapp"
+      }
   }
 }

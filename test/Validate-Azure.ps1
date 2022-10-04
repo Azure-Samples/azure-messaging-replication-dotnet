@@ -38,23 +38,23 @@ function Get-ServiceBusConnectionString  ([String] $NamespaceName, [String] $Que
     }
 }
 
-function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
+function Test-EventHubsConfigApp([String] $Location, [String] $RGName, [String] $FAName) {
     
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -Location $Location
     
     Write-Host " - Build Project"
     & "$PSScriptRoot\..\functions\config\EventHubCopy\Build-FunctionApp.ps1" 
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\config\EventHubCopy\Configure-Function.ps1" -TaskName EventHubAToEventHubB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName eventHubA -TargetNamespaceName $RGname -TargetEventHubName eventHubB
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Configure-Function.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -SourceNamespacename "eventhubcopyconfig-left" -SourceEventHubName telemetry -TargetNamespaceName "eventhubcopyconfig-right" -TargetEventHubName telemtry
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\config\EventHubCopy\Deploy-FunctionApp.ps1" -FunctionAppName $FAName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\EventHubCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubA -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName eventHubB -UseSAS $true)" -et eventHubA -es eventHubB -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName "eventhubcopyconfig-left" -EventHubName telemetry -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName "eventhubcopyconfig-right" -EventHubName telemetry -UseSAS $true)" -et telemetry -es telemetry -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
     return $result
@@ -62,7 +62,7 @@ function Test-EventHubsConfigApp([String] $Location, [String] $RGName) {
 
 function Test-EventHubsCodeApp([String] $Location, [String] $RGName, [String] $FAName) {
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
+    & "$PSScriptRoot\..\functions\code\EventHubCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -FunctionAppName $FAName
     
     Write-Host " - Configure App"
     & "$PSScriptRoot\..\functions\code\EventHubCopy\Configure-Function.ps1" -FunctionAppName $FAName -ResourceGroupName $RGName -SourceNamespacename "eventhubcopy-left" -SourceEventHubName "telemetry" -TargetNamespaceName "eventhubcopy-right" -TargetEventHubName "telemetry"
@@ -79,37 +79,35 @@ function Test-EventHubsCodeApp([String] $Location, [String] $RGName, [String] $F
     return $result
 }
 
-function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName) {
+function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName, [string] $FAName) {
     Write-Host " - Deploy Event Hubs"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\code\EventHubMerge\Deploy-Resources.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -Location $Location
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName "telemetry" -TargetNamespaceName $RGname -TargetEventHubName "telemetry"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Configure-Function.ps1" -FunctionAppName $RGName -SourceNamespacename $RGName -SourceEventHubName "telemetry" -TargetNamespaceName $RGname -TargetEventHubName "telemetry"
+    & "$PSScriptRoot\..\functions\code\EventHubMerge\Configure-Function.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -LeftNamespacename "eventhubmerge-left" -LeftEventHubName "telemetry" -RightNamespaceName "eventhubmerge-right" -RightEventHubName "telemetry"
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\code\EventHubToEventHubMerge\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\code\EventHubMerge\Deploy-Function.ps1" -FunctionAppName $FAName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\EventHubCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName "eventhubmerge-left" -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName "eventhubmerge-right" -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     if ( $result -ne 0 )
     {
         return $result
     }
-    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName $RGName -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\EventHubCopyValidation.exe" -t "$(Get-EventHubConnectionString -NamespaceName "eventhubmerge-left" -EventHubName "telemetry" -UseSAS $true)" -s "$(Get-EventHubConnectionString -NamespaceName "eventhubmerge-right" -EventHubName "telemetry" -UseSAS $true)" -et "telemetry" -es "telemetry" -cg '\$Default' 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
 
     return $result
 }
 
-
-function Test-ServiceBusConfigApp([String] $Location, [String] $RGName) {
+function Test-ServiceBusConfigApp([String] $Location, [String] $RGName, [String] $FAName) {
     
     Write-Host " - Deploy Service Bus"
-    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
     
     Write-Host " - Build Project"
     & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Build-FunctionApp.ps1" 
@@ -128,9 +126,9 @@ function Test-ServiceBusConfigApp([String] $Location, [String] $RGName) {
     return $result
 }
 
-function Test-ServiceBusCodeApp([String] $Location, [String] $RGName) {
+function Test-ServiceBusCodeApp([String] $Location, [String] $RGName, [String] $FAName) {
     Write-Host " - Deploy Service Bus"
-    & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName 
+    & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
     
     Write-Host " - Configure App"
     & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Configure-Function.ps1" -TaskName QueueAToQueueB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceQueueName queueA -TargetNamespaceName $RGname -TargetQueueName queueB
@@ -200,14 +198,13 @@ if ( $result -ne 0) {
     exit $result
 }
 
-exit 0
-
 Write-Host "Event Hub Merge Scenario Code/Premium"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
@@ -221,7 +218,8 @@ $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
@@ -235,13 +233,15 @@ $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
 if ( $result -ne 0) {
     exit $result
 }
+
 
 Write-Host "Service Bus Scenario Config/Consumption"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
@@ -257,12 +257,15 @@ if ( $result -ne 0) {
     exit $result
 }
 
+exit 0
+
 Write-Host "Service Bus Scenario Config Premium/Consumption"
 $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-ServiceBusConfigApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-ServiceBusConfigApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
@@ -275,7 +278,8 @@ $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-ServiceBusCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-ServiceBusCodeApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 
@@ -288,9 +292,9 @@ $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-ServiceBusCodeApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-ServiceBusCodeApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
-
 
 exit $result

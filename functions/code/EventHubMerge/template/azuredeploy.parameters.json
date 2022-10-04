@@ -3,13 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "leftNamespaceName": {
-      "value": "GEN-UNIQUE"
+      "value": "eventhub-merge-left"
     },
     "rightNamespaceName": {
-      "value": "GEN-UNIQUE"
+      "value": "eventhub-merge-right"
     },
     "functionsAppName": {
-      "value": "GEN-UNIQUE"
+      "value": "fnapp"
     }
   }
 }
