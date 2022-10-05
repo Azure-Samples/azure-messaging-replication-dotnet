@@ -47,7 +47,7 @@
         }
     },
     "variables": {
-         "appName": "[concat('app-', uniqueString(resourceGroup().id))]",
+        "appName": "[concat('app-', uniqueString(resourceGroup().id))]",
         "vnetAddressPrefix": "10.0.0.0/16",
         "subnetAddressPrefix": "10.0.0.0/24",
         "functionAppName": "[variables('appName')]",
