@@ -15,7 +15,7 @@ param (
     # Name of the source Event Hub
     [Parameter(Mandatory)]
     [String]
-    $SourceEventHubName,
+    $SourceQueueName,
     # Target Event Hubs Namespace
     [Parameter(Mandatory)]
     [String]
@@ -23,16 +23,17 @@ param (
     # Name of the target Event Hub
     [Parameter(Mandatory)]
     [String]
-    $TargetEventHubName
+    $TargetQueueName
 )
 
-$null = az servicebus queue authorization-rule create --resource-group $ResourceGroupName --namespace-name $SourceNamespacename --queue-name jobs-transfer --name replication-listen --rights listen
+# Configure the source
 
-$cxnstring = $(az servicebus queue authorization-rule keys list --resource-group $ResourceGroupName --namespace-name $SourceNamespacename --queue-name jobs-transfer --name replication-listen --output=json | ConvertFrom-Json -AsHashtable).primaryConnectionString
-      
-$regex_strip_entity_name="(.*);EntityPath=.*;*(.*)$"
-if ($cxnstring =~ $regex_strip_entity_name ){
-    $cxnstring="${BASH_REMATCH[1]};${BASH_REMATCH[2]}"
-}
-      
+$null = az servicebus queue authorization-rule create --resource-group $ResourceGroupName --namespace-name $SourceNamespacename --queue-name jobs-transfer --name replication-listen --rights listen
+$cxnstring = $(az servicebus queue authorization-rule keys list --resource-group $ResourceGroupName --namespace-name $SourceNamespacename --queue-name jobs-transfer --name replication-listen --output=json | ConvertFrom-Json -AsHashtable).primaryConnectionString 
 $null = az functionapp config appsettings set --name $FunctionAppName --resource-group $ResourceGroupName --settings "jobs-transfer-source-connection=$cxnstring"
+
+# Configure the target
+
+$null = az servicebus queue authorization-rule create --resource-group $ResourceGroupName --namespace-name $TargetNamespacename --queue-name "jobs" --name replication-send --rights send
+$cxnstring = $(az servicebus queue authorization-rule keys list --resource-group $ResourceGroupName --namespace-name $TargetNamespacename --queue-name $TargetQueueName --name replication-send --output=json | ConvertFrom-Json -AsHashtable).primaryConnectionString
+$null = az functionapp config appsettings set --name $FunctionAppName --resource-group $ResourceGroupName --settings "jobs-target-connection=$cxnstring"

@@ -50,6 +50,7 @@ namespace ServiceBusCopyValidation
             var tracker = new ConcurrentDictionary<string, long>();
 
             Console.WriteLine("sending");
+            int sent = 0;
             List<Task> sendTasks = new List<Task>();
             for (int j = 0; j < 1000; j++)
             {
@@ -57,7 +58,14 @@ namespace ServiceBusCopyValidation
                 tracker[msgid] = sw.ElapsedTicks;
                 var message = new ServiceBusMessage(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
                 message.MessageId = msgid;
-                sendTasks.Add(sender.SendMessageAsync(message));
+                sendTasks.Add(sender.SendMessageAsync(message).ContinueWith(t =>
+                {
+                    int s = Interlocked.Increment(ref sent);
+                    if (s % 100 == 0)
+                    {
+                        Console.WriteLine($"sent {s} messages ...");
+                    }
+                }));
             }
 
             await Task.WhenAll(sendTasks);

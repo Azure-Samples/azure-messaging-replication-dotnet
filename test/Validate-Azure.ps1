@@ -107,20 +107,20 @@ function Test-EventHubsMergeCodeApp([String] $Location, [String] $RGName, [strin
 function Test-ServiceBusConfigApp([String] $Location, [String] $RGName, [String] $FAName) {
     
     Write-Host " - Deploy Service Bus"
-    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
+    & "$PSScriptRoot\..\functions\config\ServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location
     
     Write-Host " - Build Project"
-    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Build-FunctionApp.ps1" 
+    & "$PSScriptRoot\..\functions\config\ServiceBusCopy\Build-FunctionApp.ps1" 
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Configure-Function.ps1" -TaskName QueueAToQueueB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceQueueName queueA -TargetNamespaceName $RGname -TargetQueueName queueB
+    & "$PSScriptRoot\..\functions\config\ServiceBusCopy\Configure-Function.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -SourceNamespacename "servicebuscopy-left" -SourceQueueName "jobs-transfer" -TargetNamespaceName "servicebuscopy-right" -TargetQueueName "jobs"
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\config\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\config\ServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $FAName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -s "$(Get-ServiceBusConnectionString -NamespaceName "servicebuscopy-left" -QueueName "jobs-transfer" -UseSAS $true)" -t "$(Get-ServiceBusConnectionString -NamespaceName "servicebuscopy-right" -QueueName "jobs" -UseSAS $true)" -qt "jobs" -qs "jobs-transfer" 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
     return $result
@@ -128,17 +128,17 @@ function Test-ServiceBusConfigApp([String] $Location, [String] $RGName, [String]
 
 function Test-ServiceBusCodeApp([String] $Location, [String] $RGName, [String] $FAName) {
     Write-Host " - Deploy Service Bus"
-    & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location -NamespaceName $RGName -FunctionAppName $FAName
+    & "$PSScriptRoot\..\functions\code\ServiceBusCopy\Deploy-Resources.ps1" -ResourceGroupName $RGName -Location $Location
     
     Write-Host " - Configure App"
-    & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Configure-Function.ps1" -TaskName QueueAToQueueB -FunctionAppName $RGName -SourceNamespacename $RGName -SourceQueueName queueA -TargetNamespaceName $RGname -TargetQueueName queueB
+    & "$PSScriptRoot\..\functions\code\ServiceBusCopy\Configure-Function.ps1" -ResourceGroupName $RGName -FunctionAppName $FAName -SourceNamespacename "servicebuscopy-left" -SourceQueueName "jobs-transfer" -TargetNamespaceName "servicebuscopy-right" -TargetQueueName "jobs"
     
     Write-Host " - Deploy Function"
-    & "$PSScriptRoot\..\functions\code\ServiceBusToServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $RGName
+    & "$PSScriptRoot\..\functions\code\ServiceBusCopy\Deploy-FunctionApp.ps1" -FunctionAppName $FAName
 
     Write-Host " - Run Test"
     pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
-    & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -t "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueA -UseSAS $true)" -s "$(Get-ServiceBusConnectionString -NamespaceName $RGName -QueueName queueB -UseSAS $true)" -qt queueA -qs queueB 2>&1 >> "$PSScriptRoot\run.log"
+    & ".\bin\Debug\netcoreapp3.1\ServiceBusCopyValidation.exe" -s "$(Get-ServiceBusConnectionString -NamespaceName "servicebuscopy-left" -QueueName "jobs-transfer" -UseSAS $true)" -t "$(Get-ServiceBusConnectionString -NamespaceName "servicebuscopy-right" -QueueName "jobs" -UseSAS $true)" -qt "jobs" -qs "jobs-transfer" 2>&1 >> "$PSScriptRoot\run.log"
     $result = $LastExitCode 
     popd > $null
 
@@ -154,93 +154,93 @@ pushd "$PSScriptRoot\ServiceBusCopyValidation" > $null
 dotnet build "ServiceBusCopyValidation.csproj" -c Debug 2>&1 > build.log
 popd > $null
 
-Write-Host "Event Hub Scenario Code/Consumption"
-$RGName = "mjrmsgrepl$(Get-Date -UFormat '%s')"
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName 
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# Write-Host "Event Hub Scenario Code/Consumption"
+# $RGName = "mjrmsgrepl$(Get-Date -UFormat '%s')"
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName 
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    exit $result
-}
+# if ( $result -ne 0) {
+#     exit $result
+# }
 
-Write-Host "Event Hub Scenario Code/Premium"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# Write-Host "Event Hub Scenario Code/Premium"
+# $RGName = "msgrepl$(Get-Date -UFormat '%s')"
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsCodeApp -Location $Location -RGName $RGName -FAName $appName
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    Write-Host "result $result"
-    exit $result
-}
+# if ( $result -ne 0) {
+#     Write-Host "result $result"
+#     exit $result
+# }
 
-Write-Host "Event Hub Merge Scenario Code/Consumption"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
+# Write-Host "Event Hub Merge Scenario Code/Consumption"
+# $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    exit $result
-}
+# if ( $result -ne 0) {
+#     exit $result
+# }
 
-Write-Host "Event Hub Merge Scenario Code/Premium"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# Write-Host "Event Hub Merge Scenario Code/Premium"
+# $RGName = "msgrepl$(Get-Date -UFormat '%s')"
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsMergeCodeApp -Location $Location -RGName $RGName -FAName $appName
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    Write-Host "result $result"
-    exit $result
-}
+# if ( $result -ne 0) {
+#     Write-Host "result $result"
+#     exit $result
+# }
 
-Write-Host "Event Hub Scenario Config/Consumption"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# Write-Host "Event Hub Scenario Config/Consumption"
+# $RGName = "msgrepl$(Get-Date -UFormat '%s')"
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    Write-Host "result $result"
-    exit $result
-}
+# if ( $result -ne 0) {
+#     Write-Host "result $result"
+#     exit $result
+# }
 
-Write-Host "Event Hub Scenario Config Premium/Consumption"
-$RGName = "msgrepl$(Get-Date -UFormat '%s')"
-$Location = "westeurope"
-Write-Host " - Create App Host"
-& "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
-$result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
-Write-Host " - Undeploy App"
-$null = Remove-AzResourceGroup -Name $RGname -Force
+# Write-Host "Event Hub Scenario Config Premium/Consumption"
+# $RGName = "msgrepl$(Get-Date -UFormat '%s')"
+# $Location = "westeurope"
+# Write-Host " - Create App Host"
+# & "$PSScriptRoot\..\templates\Deploy-FunctionsPremiumPlan.ps1" -ResourceGroupName $RGName -Location $Location
+# $appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+# $result = Test-EventHubsConfigApp -Location $Location -RGName $RGName -FAName $appName
+# Write-Host " - Undeploy App"
+# $null = Remove-AzResourceGroup -Name $RGname -Force
 
-if ( $result -ne 0) {
-    exit $result
-}
+# if ( $result -ne 0) {
+#     exit $result
+# }
 
 
 Write-Host "Service Bus Scenario Config/Consumption"
@@ -248,7 +248,8 @@ $RGName = "msgrepl$(Get-Date -UFormat '%s')"
 $Location = "westeurope"
 Write-Host " - Create App Host"
 & "$PSScriptRoot\..\templates\Deploy-FunctionsConsumptionPlan.ps1" -ResourceGroupName $RGName -Location $Location
-$result = Test-ServiceBusConfigApp -Location $Location -RGName $RGName
+$appName = (Get-AzResourceGroupDeployment -ResourceGroupName $RGName -Name "azuredeploy").Outputs.functionsAppName.value
+$result = Test-ServiceBusConfigApp -Location $Location -RGName $RGName -FAName $appName
 Write-Host " - Undeploy App"
 $null = Remove-AzResourceGroup -Name $RGname -Force
 

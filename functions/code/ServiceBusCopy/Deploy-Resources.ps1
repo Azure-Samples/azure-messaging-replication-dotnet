@@ -7,11 +7,7 @@ param (
     # Azure Location
     [Parameter(Mandatory)]
     [String]
-    $Location,
-    # Name of the Functions App
-    [Parameter(Mandatory)]
-    [String]
-    $FunctionAppName
+    $Location
 )
 
-$null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -Location $Location -functionsAppName $FunctionAppName -TemplateFile "$PSScriptRoot\template\azuredeploy.json"
+$null = New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -Location $Location -TemplateFile "$PSScriptRoot\template\azuredeploy.json"
