@@ -112,7 +112,6 @@ namespace Azure.Messaging.Replication
                         ContentType = eventData.SystemProperties["content-type"] as string,
                         To = eventData.SystemProperties["to"] as string,
                         CorrelationId = eventData.SystemProperties["correlation-id"] as string,
-                        //Label = eventData.SystemProperties["subject"] as string,
                         ReplyTo = eventData.SystemProperties["reply-to"] as string,
                         ReplyToSessionId = eventData.SystemProperties["reply-to-group-name"] as string,
                         MessageId = eventData.SystemProperties["message-id"] as string ?? eventData.Offset.ToString(),
