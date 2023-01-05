@@ -25,10 +25,10 @@ namespace ServiceBusCopyValidation
                     CultureInfo.GetCultureInfoByIetfLanguageTag("en-us");
 
             try
-            { 
+            {
                 return CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
             }
-            catch(CommandParsingException exception)
+            catch (CommandParsingException exception)
             {
                 Console.WriteLine(exception.Message);
                 return 1;

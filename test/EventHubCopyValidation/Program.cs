@@ -25,10 +25,10 @@ namespace EventHubCopyValidation
                     CultureInfo.GetCultureInfoByIetfLanguageTag("en-us");
 
             try
-            { 
+            {
                 return CommandLineSettings.Run(args, (c) => Run(c, args)).GetAwaiter().GetResult();
             }
-            catch(CommandParsingException exception)
+            catch (CommandParsingException exception)
             {
                 Console.WriteLine(exception.Message);
                 return 1;
@@ -40,12 +40,12 @@ namespace EventHubCopyValidation
             try
             {
                 var plt = new EventHubCopyTest(settings.TargetNamespaceConnectionString,
-                    settings.SourceNamespaceConnectionString, settings.TargetEventHub, settings.SourceEventHub,
+                    settings.SourceNamespaceConnectionString, settings.TargetEventHub,
                     settings.SourceConsumerGroup);
                 await plt.RunTest();
 
                 var plt1 = new EventHubOrderTest(settings.TargetNamespaceConnectionString,
-                    settings.SourceNamespaceConnectionString, settings.TargetEventHub, settings.SourceEventHub,
+                    settings.SourceNamespaceConnectionString, settings.TargetEventHub,
                     settings.SourceConsumerGroup);
                 await plt1.RunTest();
             }

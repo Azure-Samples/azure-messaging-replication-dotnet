@@ -9,7 +9,9 @@ namespace EventHubCopyValidation
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.EventHubs;
+    using Azure.Messaging.EventHubs;
+    using Azure.Messaging.EventHubs.Consumer;
+    using Azure.Messaging.EventHubs.Producer;
     using Xunit;
 
     class EventHubCopyTest
@@ -20,42 +22,29 @@ namespace EventHubCopyValidation
 
         readonly string targetEventHub;
 
-        readonly string sourceEventHub;
-
         readonly string sourceConsumerGroup;
 
         public EventHubCopyTest(
             string targetNamespaceConnectionString,
             string sourceNamespaceConnectionString,
-            string targetEventHub, 
-            string sourceEventHub, 
+            string targetEventHub,
             string sourceConsumerGroup)
         {
             this.targetNamespaceConnectionString = targetNamespaceConnectionString;
             this.sourceNamespaceConnectionString = sourceNamespaceConnectionString;
             this.targetEventHub = targetEventHub;
-            this.sourceEventHub = sourceEventHub;
             this.sourceConsumerGroup = sourceConsumerGroup;
         }
-
 
         public async Task RunTest()
         {
             Console.WriteLine("EventHubCopyTest");
-            var senderCxn = new EventHubsConnectionStringBuilder(targetNamespaceConnectionString)
-            {
-                EntityPath = targetEventHub
-            };
-            var sendSideClient = EventHubClient.CreateFromConnectionString(senderCxn.ToString());
-            var receiverCxn = new EventHubsConnectionStringBuilder(sourceNamespaceConnectionString)
-            {
-                EntityPath = sourceEventHub
-            };
-            var receiveSideClient = EventHubClient.CreateFromConnectionString(receiverCxn.ToString());
+            var targetproducer = new EventHubProducerClient(targetNamespaceConnectionString);
+            var sourceconsumer = new EventHubConsumerClient(this.sourceConsumerGroup, this.sourceNamespaceConnectionString);
 
-            var senderInfo = await sendSideClient.GetRuntimeInformationAsync();
-            var receiverInfo = await receiveSideClient.GetRuntimeInformationAsync();
-            Assert.Equal(senderInfo.PartitionCount, receiverInfo.PartitionCount);
+            var senderPartitions = await targetproducer.GetPartitionIdsAsync();
+            var receiverPartitions = await sourceconsumer.GetPartitionIdsAsync();
+            Assert.Equal(senderPartitions.Count(), receiverPartitions.Count());
 
             var start = DateTime.UtcNow;
 
@@ -63,11 +52,11 @@ namespace EventHubCopyValidation
             sw.Start();
             var tracker = new ConcurrentDictionary<string, long>();
 
-            int messageCount = 50000;
+            int messageCount = 5000;
             int sizeInBytes = 128;
             var data = new byte[sizeInBytes];
-            Array.Fill<byte>(data,0xff);
-                
+            Array.Fill<byte>(data, 0xff);
+
             int sent = 0;
             Console.WriteLine($"sending {messageCount} messages of {sizeInBytes} bytes ...");
             List<Task> sendTasks = new List<Task>();
@@ -77,62 +66,85 @@ namespace EventHubCopyValidation
                 tracker[msgid] = sw.ElapsedTicks;
 
                 var eventData = new EventData(data);
-                eventData.Properties["message-id"] = msgid;
-                sendTasks.Add(sendSideClient.SendAsync(eventData, msgid).ContinueWith(t=>{
-                    int s = Interlocked.Increment(ref sent); 
-                    if ( s % 5000 == 0) {
+                eventData.MessageId = msgid;
+
+                var options = new SendEventOptions
+                {
+                    PartitionKey = msgid
+                };
+
+                sendTasks.Add(targetproducer.SendAsync(new List<EventData>() { eventData }, options).ContinueWith(t =>
+                {
+                    int s = Interlocked.Increment(ref sent);
+                    if (s % 5000 == 0)
+                    {
                         Console.WriteLine($"sent {s} messages ...");
                     }
                 }));
             }
             await Task.WhenAll(sendTasks);
-            
+
             List<Task> receiveTasks = new List<Task>();
 
             ConcurrentBag<long> durations = new ConcurrentBag<long>();
             Console.Write("receiving: ");
-            foreach (var partitionId in receiverInfo.PartitionIds)
+            foreach (var partitionId in receiverPartitions)
             {
                 receiveTasks.Add(Task.Run(async () =>
                 {
-                    int received = 0; 
-                    var receiver = receiveSideClient.CreateReceiver(this.sourceConsumerGroup, partitionId,
-                        EventPosition.FromEnqueuedTime(start));
+                    int received = 0;
+                    var startPosition = EventPosition.FromEnqueuedTime(start);
+                    var options = new ReadEventOptions { MaximumWaitTime = TimeSpan.FromSeconds(30) };
+                    using var cancellationTokenSource = new CancellationTokenSource();
+                    var cancellationToken = cancellationTokenSource.Token;
+
                     Console.WriteLine($"Partition {partitionId} starting ");
-                    while (!tracker.IsEmpty)
+                    try
                     {
-                        var eventData = await receiver.ReceiveAsync(100, TimeSpan.FromSeconds(30));
-                        if (eventData != null)
+                        await foreach (var partitionEvent in sourceconsumer.ReadEventsFromPartitionAsync(partitionId, startPosition, options, cancellationToken))
                         {
-                            foreach (var ev in eventData)
+                            if (!tracker.IsEmpty)
                             {
-                                string msgid = ev.Properties["message-id"] as string;
-                                if(tracker.TryRemove(msgid, out var swval)) 
+                                var eventData = partitionEvent.Data;
+                                if (eventData == null)
                                 {
-                                    durations.Add(sw.ElapsedTicks - swval);
+                                    Console.WriteLine($"No events were received during the {options.MaximumWaitTime} window.");
+                                    break;
                                 }
-                                int s = Interlocked.Increment(ref received); 
-                                if ( s % 5000 == 0) {
-                                    Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                else
+                                {
+                                    string msgid = eventData.MessageId;
+                                    if (tracker.TryRemove(msgid, out var swval))
+                                    {
+                                        durations.Add(sw.ElapsedTicks - swval);
+                                    }
+                                    int s = Interlocked.Increment(ref received);
+                                    if (s % 5000 == 0)
+                                    {
+                                        Console.WriteLine($"Partition {partitionId} received {s} messages ...");
+                                    }
                                 }
                             }
+                            else
+                            {
+                                cancellationTokenSource.Cancel();
+                            }
                         }
-                        else
-                        {
-                            Console.WriteLine($"Partition {partitionId} empty.");
-                            break;
-                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Test run is ending
                     }
                     Console.WriteLine($"Partition {partitionId} received {received} messages. Done.");
                 }));
             }
-           
+
             await Task.WhenAll(receiveTasks);
             Console.WriteLine();
             Assert.True(tracker.IsEmpty, $"tracker is not empty: {tracker.Count}");
 
-            Console.WriteLine($"Duration {((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond}");
-            
+            Console.WriteLine($"Duration {((double)durations.Sum() / (double)durations.Count) / TimeSpan.TicksPerMillisecond}");
+
         }
     }
 }

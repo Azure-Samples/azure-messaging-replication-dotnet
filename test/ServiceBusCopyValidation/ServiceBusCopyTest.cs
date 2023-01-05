@@ -9,7 +9,7 @@ namespace ServiceBusCopyValidation
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.ServiceBus;
+    using Azure.Messaging.ServiceBus;
     using Xunit;
 
     class ServiceBusCopyTest
@@ -25,7 +25,7 @@ namespace ServiceBusCopyValidation
         public ServiceBusCopyTest(
             string targetNamespaceConnectionString,
             string sourceNamespaceConnectionString,
-            string targetQueue, 
+            string targetQueue,
             string sourceQueue)
         {
             this.targetNamespaceConnectionString = targetNamespaceConnectionString;
@@ -37,17 +37,11 @@ namespace ServiceBusCopyValidation
 
         public async Task RunTest()
         {
-            var senderCxn = new ServiceBusConnectionStringBuilder(targetNamespaceConnectionString)
-            {
-                EntityPath = targetQueue
-            };
-            var sendSideClient =  new Microsoft.Azure.ServiceBus.Core.MessageSender(senderCxn);
+            var sendServiceBusClient = new ServiceBusClient(targetNamespaceConnectionString);
+            var sender = sendServiceBusClient.CreateSender(targetQueue);
 
-            var receiverCxn = new ServiceBusConnectionStringBuilder(sourceNamespaceConnectionString)
-            {
-                EntityPath = sourceQueue
-            };
-            var receiveSideClient = new Microsoft.Azure.ServiceBus.Core.MessageReceiver(receiverCxn);
+            var receiveServiceBusClient = new ServiceBusClient(sourceNamespaceConnectionString);
+            var receiver = receiveServiceBusClient.CreateReceiver(sourceQueue);
 
             var start = DateTime.UtcNow;
 
@@ -56,18 +50,26 @@ namespace ServiceBusCopyValidation
             var tracker = new ConcurrentDictionary<string, long>();
 
             Console.WriteLine("sending");
+            int sent = 0;
             List<Task> sendTasks = new List<Task>();
             for (int j = 0; j < 1000; j++)
             {
                 string msgid = Guid.NewGuid().ToString();
                 tracker[msgid] = sw.ElapsedTicks;
-                var message = new Message(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
+                var message = new ServiceBusMessage(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
                 message.MessageId = msgid;
-                sendTasks.Add(sendSideClient.SendAsync(message));
+                sendTasks.Add(sender.SendMessageAsync(message).ContinueWith(t =>
+                {
+                    int s = Interlocked.Increment(ref sent);
+                    if (s % 100 == 0)
+                    {
+                        Console.WriteLine($"sent {s} messages ...");
+                    }
+                }));
             }
 
-             await Task.WhenAll(sendTasks);
-        
+            await Task.WhenAll(sendTasks);
+
             ConcurrentBag<long> durations = new ConcurrentBag<long>();
             Console.Write("receiving: ");
             var receiveTask = Task.Run(async () =>
@@ -75,17 +77,17 @@ namespace ServiceBusCopyValidation
 
                     while (!tracker.IsEmpty)
                     {
-                        var message = await receiveSideClient.ReceiveAsync(100, TimeSpan.FromSeconds(30));
+                        var message = await receiver.ReceiveMessagesAsync(100, TimeSpan.FromSeconds(30));
                         if (message != null)
                         {
                             foreach (var msg in message)
                             {
                                 string msgid = msg.MessageId;
-                                if(tracker.TryRemove(msgid, out var swval)) 
+                                if (tracker.TryRemove(msgid, out var swval))
                                 {
                                     durations.Add(sw.ElapsedTicks - swval);
                                 }
-                                await receiveSideClient.CompleteAsync(msg.SystemProperties.LockToken);
+                                await receiver.CompleteMessageAsync(msg);
                             }
                         }
                         else
@@ -94,13 +96,13 @@ namespace ServiceBusCopyValidation
                         }
                     }
                 });
-           
+
             await receiveTask;
             Console.WriteLine();
             Assert.True(tracker.IsEmpty, $"tracker is not empty: {tracker.Count}");
 
-            Console.WriteLine(((double)durations.Sum()/(double)durations.Count)/TimeSpan.TicksPerMillisecond);
-            
+            Console.WriteLine(((double)durations.Sum() / (double)durations.Count) / TimeSpan.TicksPerMillisecond);
+
         }
     }
 }

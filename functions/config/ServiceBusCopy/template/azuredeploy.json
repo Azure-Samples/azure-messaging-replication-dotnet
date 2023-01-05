@@ -4,12 +4,14 @@
   "parameters": {
     "rightNamespaceName": {
       "type": "string",
+      "defaultValue": "servicebuscopy-right",
       "metadata": {
         "description": "Name of the Service Bus namespace"
       }
     },
     "leftNamespaceName": {
       "type": "string",
+      "defaultValue": "servicebuscopy-left",
       "metadata": {
         "description": "Name of the Service Bus namespace"
       }

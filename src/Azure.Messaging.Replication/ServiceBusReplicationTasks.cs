@@ -6,19 +6,20 @@ namespace Azure.Messaging.Replication
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Microsoft.Azure.EventHubs;
-    using Microsoft.Azure.ServiceBus;
+    using Azure.Messaging.EventHubs;
+    using Azure.Messaging.EventHubs.Producer;
+    using Azure.Messaging.ServiceBus;
     using Microsoft.Azure.WebJobs;
     using Microsoft.Extensions.Logging;
 
     public class ServiceBusReplicationTasks
     {
-        public static Task ForwardToEventHub(Message[] input, EventHubClient output, ILogger log)
+        public static Task ForwardToEventHub(ServiceBusReceivedMessage[] input, EventHubProducerClient output, ILogger log)
         {
             return ConditionalForwardToEventHub(input, output, log);
         }
 
-        public static Task ConditionalForwardToEventHub(Message[] input, EventHubClient output, ILogger log, Func<Message, EventData> factory = null)
+        public static Task ConditionalForwardToEventHub(ServiceBusReceivedMessage[] input, EventHubProducerClient output, ILogger log, Func<ServiceBusReceivedMessage, EventData> factory = null)
         {
             var tasks = new List<Task>();
             var noPartitionBatch = new List<EventData>();
@@ -40,27 +41,29 @@ namespace Azure.Messaging.Replication
                 else
                 {
                     eventData = new EventData(message.Body);
-                    foreach (var property in message.UserProperties)
+                    foreach (var property in message.ApplicationProperties)
                     {
                         eventData.Properties.Add(property);
                     }
                 }
 
                 eventData.Properties[Constants.ReplEnqueuedTimePropertyName] =
-                    (message.UserProperties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
-                        ? message.UserProperties[Constants.ReplEnqueuedTimePropertyName] + ";"
+                    (message.ApplicationProperties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
+                        ? message.ApplicationProperties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedTimeUtc.ToString("u");
+                    message.ScheduledEnqueueTime.ToString("u");
+
                 eventData.Properties[Constants.ReplOffsetPropertyName] =
-                   (message.UserProperties.ContainsKey(Constants.ReplOffsetPropertyName)
-                        ? message.UserProperties[Constants.ReplOffsetPropertyName] + ";"
+                   (message.ApplicationProperties.ContainsKey(Constants.ReplOffsetPropertyName)
+                        ? message.ApplicationProperties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedSequenceNumber.ToString();
+                    message.SequenceNumber.ToString();
+
                 eventData.Properties[Constants.ReplSequencePropertyName] =
-                    (message.UserProperties.ContainsKey(Constants.ReplSequencePropertyName)
-                        ? message.UserProperties[Constants.ReplSequencePropertyName] + ";"
+                    (message.ApplicationProperties.ContainsKey(Constants.ReplSequencePropertyName)
+                        ? message.ApplicationProperties[Constants.ReplSequencePropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedSequenceNumber.ToString();
+                    message.SequenceNumber.ToString();
 
                 if (key != null)
                 {
@@ -86,7 +89,11 @@ namespace Azure.Messaging.Replication
             {
                 foreach (var batch in partitionBatches)
                 {
-                    tasks.Add(output.SendAsync(batch.Value, batch.Key));
+                    var options = new SendEventOptions
+                    {
+                        PartitionKey = batch.Key
+                    };
+                    tasks.Add(output.SendAsync(batch.Value, options));
                 }
             }
 
@@ -94,38 +101,38 @@ namespace Azure.Messaging.Replication
         }
 
 
-        public static Task ForwardToServiceBus(Message[] input, IAsyncCollector<Message> output,
+        public static Task ForwardToServiceBus(ServiceBusReceivedMessage[] input, IAsyncCollector<ServiceBusMessage> output,
             ILogger log)
         {
             return ConditionalForwardToServiceBus(input, output, log);
         }
 
-        public static async Task ConditionalForwardToServiceBus(Message[] input, IAsyncCollector<Message> output,
-            ILogger log, Func<Message, Message> factory = null)
+        public static async Task ConditionalForwardToServiceBus(ServiceBusReceivedMessage[] input, IAsyncCollector<ServiceBusMessage> output,
+            ILogger log, Func<ServiceBusReceivedMessage, ServiceBusMessage> factory = null)
         {
-            foreach (Message message in input)
+            foreach (ServiceBusReceivedMessage message in input)
             {
-                var forwardedMessage = factory != null ? factory(message) : message.Clone();
+                var forwardedMessage = factory != null ? factory(message) : new ServiceBusMessage(message); //?
 
                 if (forwardedMessage == null)
                 {
                     continue;
                 }
-                forwardedMessage.UserProperties[Constants.ReplEnqueuedTimePropertyName] =
-                    (message.UserProperties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
-                        ? message.UserProperties[Constants.ReplEnqueuedTimePropertyName] + ";"
+                forwardedMessage.ApplicationProperties[Constants.ReplEnqueuedTimePropertyName] =
+                    (message.ApplicationProperties.ContainsKey(Constants.ReplEnqueuedTimePropertyName)
+                        ? message.ApplicationProperties[Constants.ReplEnqueuedTimePropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedTimeUtc.ToString("u");
-                forwardedMessage.UserProperties[Constants.ReplOffsetPropertyName] =
-                    (message.UserProperties.ContainsKey(Constants.ReplOffsetPropertyName)
-                        ? message.UserProperties[Constants.ReplOffsetPropertyName] + ";"
+                    message.ScheduledEnqueueTime.ToString("u");
+                forwardedMessage.ApplicationProperties[Constants.ReplOffsetPropertyName] =
+                    (message.ApplicationProperties.ContainsKey(Constants.ReplOffsetPropertyName)
+                        ? message.ApplicationProperties[Constants.ReplOffsetPropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedSequenceNumber.ToString();
-                forwardedMessage.UserProperties[Constants.ReplSequencePropertyName] =
-                    (message.UserProperties.ContainsKey(Constants.ReplSequencePropertyName)
-                        ? message.UserProperties[Constants.ReplSequencePropertyName] + ";"
+                    message.SequenceNumber.ToString();
+                forwardedMessage.ApplicationProperties[Constants.ReplSequencePropertyName] =
+                    (message.ApplicationProperties.ContainsKey(Constants.ReplSequencePropertyName)
+                        ? message.ApplicationProperties[Constants.ReplSequencePropertyName] + ";"
                         : string.Empty) +
-                    message.SystemProperties.EnqueuedSequenceNumber.ToString();
+                    message.SequenceNumber.ToString();
                 await output.AddAsync(forwardedMessage);
             }
         }

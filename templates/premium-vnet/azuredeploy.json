@@ -21,13 +21,6 @@
                 "description": "The language worker runtime to load in the function app."
             }
         },
-        "appName": {
-            "type": "string",
-            "defaultValue": "[resourceGroup().name]",
-            "metadata": {
-                "description": "The name of the function app that you wish to create."
-            }
-        },
         "storageAccountType": {
             "type": "string",
             "defaultValue": "Standard_LRS",
@@ -54,11 +47,12 @@
         }
     },
     "variables": {
+        "appName": "[concat('app-', uniqueString(resourceGroup().id))]",
         "vnetAddressPrefix": "10.0.0.0/16",
         "subnetAddressPrefix": "10.0.0.0/24",
-        "functionAppName": "[parameters('appName')]",
-        "hostingPlanName": "[parameters('appName')]",
-        "applicationInsightsName": "[parameters('appName')]",
+        "functionAppName": "[variables('appName')]",
+        "hostingPlanName": "[variables('appName')]",
+        "applicationInsightsName": "[variables('appName')]",
         "storageAccountName": "[resourceGroup().name]",
         "functionWorkerRuntime": "[parameters('runtime')]",
         "appInsightsResourceId": "[resourceId('Microsoft.Insights/components', variables('applicationInsightsName'))]",
@@ -206,14 +200,15 @@
             ],
             "properties": {
                 "roleDefinitionId": "[variables('storageBlobDataContributorRole')]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2019-08-01', 'Full').identity.principalId]"
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('appName')), '2019-08-01', 'Full').identity.principalId]",
+                "principalType": "ServicePrincipal"
             }
         }
     ],
     "outputs": {
         "assignedManagedIdentity": {
             "type": "object",
-            "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2019-08-01', 'Full').identity]"
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('appName')), '2019-08-01', 'Full').identity]"
         },
         "functionsAppName": {
             "type": "string",
